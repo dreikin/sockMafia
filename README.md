@@ -1,6 +1,7 @@
 [![Dependency Status](https://david-dm.org/yamikuronue/sockMafia/master.svg)](https://david-dm.org/yamikuronue/sockMafia/master)
 [![devDependency Status](https://david-dm.org/yamikuronue/sockMafia/master/dev-status.svg)](https://david-dm.org/yamikuronue/sockMafia/master#info=devDependencies)
 [![optionalDependency Status](https://david-dm.org/yamikuronue/sockMafia/master/optional-status.svg)](https://david-dm.org/yamikuronue/sockMafia/master#info=optionalDependencies)
+[![Build Status](https://travis-ci.org/yamikuronue/sockMafia.svg?branch=master)](https://travis-ci.org/yamikuronue/sockMafia)
 
 
 #SockBot Mafia
