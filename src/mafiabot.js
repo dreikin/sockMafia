@@ -69,6 +69,7 @@ const queries = {
                         game INTEGER NOT NULL REFERENCES games(id),
                         day INTEGER NOT NULL,
                         day_start INTEGER NOT NULL, -- Post number that starts the day
+                        day_end INTEGER -- Post number that ends the day
                     );',
         // Depends on:
         // * games
