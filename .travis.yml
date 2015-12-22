@@ -1,0 +1,12 @@
+language: node_js
+node_js:
+- 'node'
+- '4'
+- '5'
+before_script:
+- rm -rf ./coverage
+after_script:
+- test -e ./coverage/lcov.info && < ./coverage/lcov.info ./node_modules/coveralls/bin/coveralls.js
+env:
+  global:
+    service_name: travis-ci
