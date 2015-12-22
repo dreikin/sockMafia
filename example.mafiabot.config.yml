@@ -1,0 +1,17 @@
+---
+core:
+  username: username
+  password: password
+  owner: accalia
+  ignoreUsers:
+    - blakeyrat
+    - PaulaBean
+  ignoreCategories:
+    - 8
+    - 23
+  cooldownPeriod: 0
+plugins:
+  './plugins/mafiabot'
+    thread: 52778
+    mod: moduser
+    db: './mafiadb'
