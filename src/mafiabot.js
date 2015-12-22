@@ -19,7 +19,7 @@ const internals = {
     events: null,
     db: null,
 	ensureGameExists: function(id, callback) {
-		const lookupStmt = internals.db.prepare('SELECT id FROM games WHERE id = ?');
+		const lookupStmt = internals.db.prepare(queries.select.game_by_id);
 		lookupStmt.get(id, (err, row) => {
 			if (err) {
 				callback(err);
@@ -27,7 +27,7 @@ const internals = {
 			}
 			
 			if (!row) {
-				const insertStmt = internals.db.prepare('INSERT INTO games (id, status, current_day, current_stage) VALUES (?, (SELECT id FROM game_statuses WHERE status="active"),0,(SELECT id FROM stages WHERE stage="night")');
+				const insertStmt = internals.db.prepare(queries.insert.game);
 				insertStmt.run(id, (er) => {
 					if (er) {
 						callback(er);
@@ -43,29 +43,92 @@ const internals = {
 };
 exports.internals = internals;
 
+const queries = {
+    dbPragma = 'PRAGMA foreign_keys = ON;
+                PRAGMA encoding = "UTF-8";',
+    createTable = {
+        // No dependencies
+        players = 'CREATE TABLE players (
+                       id INTEGER PRIMARY KEY ASC,
+                       name TEXT NOT NULL UNIQUE ON CONFLICT IGNORE
+                   );',
+        // Depends on:
+        // * game_statuses
+        // * stages
+        games = 'CREATE TABLE games (
+                     id INTEGER PRIMARY KEY ASC, -- Currently the same as the thread number.
+                     status INTEGER NOT NULL REFERENCES game_statuses(id),
+                     current_day INTEGER NOT NULL DEFAULT 0,
+                     current_stage INTEGER NOT NULL REFERENCES stages(id),
+                     name TEXT -- Friendly name for humans querying db.
+                 );',
+        // Depends on:
+        // * games
+        // * players
+        // * player_statuses
+        gamesplayers = 'CREATE TABLE gamesplayers (
+                            id INTEGER PRIMARY KEY ASC,
+                            game INTEGER NOT NULL REFERENCES games(id),
+                            player INTEGER NOT NULL REFERENCES players(id),
+                            player_status INTEGER NOT NULL REFERENCES player_statuses(id),
+                            UNIQUE(game, player) ON CONFLICT IGNORE
+                        );',
+        // No dependencies
+        player_statuses = 'CREATE TABLE player_statuses (
+                               id INTEGER PRIMARY KEY ASC,
+                               status TEXT NOT NULL UNIQUE ON CONFLICT IGNORE
+                           );',
+        // No dependencies
+        game_statuses = 'CREATE TABLE game_statuses (
+                               id INTEGER PRIMARY KEY ASC,
+                               status TEXT NOT NULL UNIQUE ON CONFLICT IGNORE
+                           );',
+        // No dependencies
+        stages = 'CREATE TABLE stages (
+                      id INTEGER PRIMARY KEY ASC,
+                      stage TEXT NOT NULL UNIQUE ON CONFLICT IGNORE
+                  );',
+        // Depends on:
+        // * games
+        // * players
+        votes = 'CREATE TABLE votes (
+                     id INTEGER PRIMARY KEY ASC,
+                     game INTEGER NOT NULL REFERENCES games(id),
+                     day INTEGER NOT NULL,
+                     post INTEGER NOT NULL, -- Currently the post number in the game thread.
+                     voter INTEGER NOT NULL REFERENCES players(id),
+                     target INTEGER NOT NULL REFERENCES players(id),
+                     UNIQUE(game, post)
+                 );'
+    },
+    createIndex = {
+        players = 'CREATE INDEX players_lc ON players(lower(name));'
+    },
+    insert = {
+        player = "",
+        game = 'INSERT INTO games (id, status, current_day, current_stage) VALUES (?, (SELECT id FROM game_statuses WHERE status="active"),0,(SELECT id FROM stages WHERE stage="day")',
+        vote = '',
+        player_statuses = 'INSERT INTO player_statuses (id, status) VALUES (0, alive), (1,dead), (42,mod)',
+        game_statuses = 'INSERT INTO game_statuses (id, status) VALUES (0, active), (1,finished)',
+        stages = 'INSERT INTO stages (id, stage) VALUES (0, day), (1,night)',
+        player_into_game = 'INSERT INTO gamesplayers (game, player, player_status) VALUES (?, (SELECT id FROM players WHERE name = ?), (SELECT id FROM player_statuses WHERE status=?)'
+    },
+    select = {
+        player_in_game = 'SELECT id FROM gamesplayers INNER JOIN players ON gamesplayers.player = players.id WHERE game = ? AND lower(players.name) = lower(?)',
+        game_by_id = 'SELECT id FROM games WHERE id = ?'
+    }
+};
+
 exports.createDB = function() {
-	internals.db = new sqlite3.Database(internals.configuration.db, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, () => {
-		internals.db.run('CREATE TABLE players (id INTEGER PRIMARY KEY ASC,	name TEXT NOT NULL UNIQUE ON CONFLICT IGNORE)');
-						
-		internals.db.run('CREATE TABLE games (id INTEGER PRIMARY KEY ASC,status INTEGER NOT NULL REFERENCES statuses(id),current_day INTEGER NOT NULL DEFAULT 0,current_stage INTEGER NOT NULL REFERENCES stages(id),name TEXT);');
-					
-		internals.db.run('CREATE TABLE gamesplayers (id INTEGER PRIMARY KEY ASC,game INTEGER NOT NULL REFERENCES games(id),player INTEGER NOT NULL REFERENCES players(id),player_status INTEGER NOT NULL REFERENCES statuses(id),UNIQUE(game, player) ON CONFLICT IGNORE);');
-					
-		internals.db.run('CREATE TABLE player_statuses (id INTEGER PRIMARY KEY ASC,status TEXT NOT NULL UNIQUE ON CONFLICT IGNORE);'
-		, () => {
-			internals.db.run('INSERT INTO player_statuses (id, status) VALUES (0, alive), (1,dead), (42,mod)');
-		});
-		
-		internals.db.run('CREATE TABLE game_statuses (id INTEGER PRIMARY KEY ASC,status TEXT NOT NULL UNIQUE ON CONFLICT IGNORE);'
-		, () => {
-			internals.db.run('INSERT INTO game_statuses (id, status) VALUES (0, active), (1,finished)');
-		});
-		
-		internals.db.run('CREATE TABLE stages (id INTEGER PRIMARY KEY ASC, stage TEXT NOT NULL UNIQUE ON CONFLICT IGNORE);'
-		, () => {
-			internals.db.run('INSERT INTO stages (id, stage) VALUES (0, day), (1,night)');
-		});
-	});
+    internals.db = new sqlite3.Database(internals.configuration.db, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, () => {
+        internals.db.run(queries.createTable.players);
+        internals.db.run(queries.createTable.player_statuses, () => {internals.db.run(queries.insert.player_statuses);});
+        internals.db.run(queries.createTable.game_statuses, () => {internals.db.run(queries.insert.game_statuses);});
+        internals.db.run(queries.createTable.stages, () => {internals.db.run(queries.insert.stages);});
+        internals.db.run(queries.createTable.games);
+        internals.db.run(queries.createTable.gamesplayers);
+        internals.db.run(queries.createTable.votes);
+    });
 };
 
 /**
@@ -98,7 +161,7 @@ exports.defaultConfig = {
  * @param {external.topics.Topic} topic Topic trigger post belongs to
  * @param {external.posts.CleanedPost} post Post that triggered notification
  */
-exports.mentionHandler = function mentionHandler(_, topic, post) {
+exports.mentionHandler = function(_, topic, post) {
     const index = Math.floor(Math.random() * internals.configuration.messages.length),
         reply = internals.configuration.messages[index].replace(/%(\w+)%/g, (__, key) => {
             let value = post[key] || '%' + key + '%';
@@ -110,7 +173,7 @@ exports.mentionHandler = function mentionHandler(_, topic, post) {
     internals.browser.createPost(topic.id, post.post_number, reply, () => 0);
 };
 
-exports.echoHandler = function echoHandler(command) {
+exports.echoHandler = function(command) {
     const text = 'topic: ' + command.post.topic_id + '\n'
                + 'post: ' + command.post.post_number + '\n'
                + 'input: `' + command.input + '`\n'
@@ -121,7 +184,7 @@ exports.echoHandler = function echoHandler(command) {
     internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
 };
 
-exports.voteHandler = function voteHandler(command) {
+exports.voteHandler = function(command) {
     let text = '';
     /* if not in players, tell user to `join`. */
     if (false) {
@@ -138,18 +201,18 @@ exports.voteHandler = function voteHandler(command) {
     internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
 };
 
-exports.joinHandler = function joinHandler(command) {
+exports.joinHandler = function(command) {
 	//Check for already existing
 	const id = command.post.topic_id;
 	const player = command.post.username;
 	
 	internals.ensureGameExists(id, () => {
-		const lookupStmt = internals.db.prepare('SELECT id FROM gamesplayers INNER JOIN players ON gamesplayers.player = players.id WHERE game = ? AND lower(player.name) = lower(?)');
+		const lookupStmt = internals.db.prepare(queries.select.player_in_game);
 		lookupStmt.get(id, player, (err, row) => {
 			if (row) {
 				internals.browser.createPost(command.post.topic_id, command.post.post_number, 'You are already in this game, @' + player + '!', () => 0);
 			} else {
-				const insertStmt = internals.db.prepare('INSERT INTO gamesplayers (game, player, player_status) VALUES (?, (SELECT id FROM players WHERE name = ?), (SELECT id FROM player_statuses WHERE status=?)');
+				const insertStmt = internals.db.prepare(queries.insert.player_into_game);
 				insertStmt.run(id, player, 'alive', (er) => {
 					if (er) {
 						internals.browser.createPost(command.post.topic_id, command.post.post_number, 'Error when adding to game: ' + er, () => 0);
@@ -161,12 +224,12 @@ exports.joinHandler = function joinHandler(command) {
 		});
 	});
 };
-exports.killHandler = function killHandler(command) {};
-exports.dayHandler = function dayHandler(command) {};
-exports.listVotesHandler = function listVotesHandler(command) {};
-exports.listAllVotesHandler = function listAllVotesHandler(command) {};
-exports.listPlayersHandler = function listPlayersHandler(command) {};
-exports.listAllPlayersHandler = function listAllPlayersHandler(command) {};
+exports.killHandler = function(command) {};
+exports.dayHandler = function(command) {};
+exports.listVotesHandler = function(command) {};
+exports.listAllVotesHandler = function(command) {};
+exports.listPlayersHandler = function(command) {};
+exports.listAllPlayersHandler = function(command) {};
 
 function registerCommands(events) {
     events.onCommand('echo', 'echo a bunch of post info (for diagnostic purposes)', exports.echoHandler, () => 0);
@@ -188,7 +251,7 @@ function registerCommands(events) {
  * @param {externals.events.SockEvents} events EventEmitter used for the bot
  * @param {Browser} browser Web browser for communicating with discourse
  */
-exports.prepare = function prepare(plugConfig, config, events, browser) {
+exports.prepare = function(plugConfig, config, events, browser) {
     if (Array.isArray(plugConfig)) {
         plugConfig = {
             messages: plugConfig
@@ -208,9 +271,9 @@ exports.prepare = function prepare(plugConfig, config, events, browser) {
 /**
  * Start the plugin after login
  */
-exports.start = function start() {};
+exports.start = function() {};
 
 /**
  * Stop the plugin prior to exit or reload
  */
-exports.stop = function stop() {};
+exports.stop = function() {};
