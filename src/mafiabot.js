@@ -64,6 +64,14 @@ const queries = {
                  );',
         // Depends on:
         // * games
+        game_days = 'CREATE TABLE gamedays (
+                        id INTEGER PRIMARY KEY ASC,
+                        game INTEGER NOT NULL REFERENCES games(id),
+                        day INTEGER NOT NULL,
+                        day_start INTEGER NOT NULL, -- Post number that starts the day
+                    );',
+        // Depends on:
+        // * games
         // * players
         // * player_statuses
         gamesplayers = 'CREATE TABLE gamesplayers (
@@ -105,15 +113,16 @@ const queries = {
         players = 'CREATE INDEX players_lc ON players(lower(name));'
     },
     insert = {
-        player = "",
+        player = 'INSERT INTO players (name) VALUES (?)',
         game = 'INSERT INTO games (id, status, current_day, current_stage) VALUES (?, (SELECT id FROM game_statuses WHERE status="active"),0,(SELECT id FROM stages WHERE stage="day")',
-        vote = '',
+        vote = 'INSERT INTO votes (game, day, post, voter, target) VALUES (?, ?, ?, (SELECT id FROM players WHERE name = ?), (SELECT id FROM players WHERE lower(name) = lower(?)))',
         player_statuses = 'INSERT INTO player_statuses (id, status) VALUES (0, alive), (1,dead), (42,mod)',
         game_statuses = 'INSERT INTO game_statuses (id, status) VALUES (0, active), (1,finished)',
         stages = 'INSERT INTO stages (id, stage) VALUES (0, day), (1,night)',
         player_into_game = 'INSERT INTO gamesplayers (game, player, player_status) VALUES (?, (SELECT id FROM players WHERE name = ?), (SELECT id FROM player_statuses WHERE status=?)'
     },
     select = {
+        player_by_name = 'SELECT id FROM players WHERE lower(players.name) = lower(?)',
         player_in_game = 'SELECT id FROM gamesplayers INNER JOIN players ON gamesplayers.player = players.id WHERE game = ? AND lower(players.name) = lower(?)',
         game_by_id = 'SELECT id FROM games WHERE id = ?'
     }
