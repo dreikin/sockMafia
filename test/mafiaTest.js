@@ -232,4 +232,56 @@ describe('mafia', () => {
 			output.should.include('Welcome to the game, @tehNinja');
 		});
 	});
+	
+	describe('list-all-players()', () => {
+		it('should be a registered command', () => {
+			const events = {
+				onCommand: commandSpy,
+				onNotification: notificationSpy
+			};
+			mafia.prepare(null, fakeConfig, events, undefined);
+			commandSpy.calledWith('list-all-players').should.be.true;
+		});
+		
+		it('should report players', () => {
+			const browser = {
+				createPost: sinon.stub()
+			};
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				}
+			};
+			
+			const players = [
+				{"name": "yamikuronue", "status": "alive"},
+				{"name": "accalia", "status": "dead"}
+			]
+
+			const runMock = {
+				each: (_, callback, complete) => {
+					callback(null, players[0]);
+					callback(null, players[1]);
+					complete(null, 2);
+				},
+				run: sandbox.stub().yields(false, false)
+			};
+			const dbMock = {
+				prepare: sandbox.stub().returns(runMock)
+			};
+
+			mafia.internals.browser = browser;
+			mafia.internals.db = dbMock;
+			sandbox.stub(mafia.internals, 'ensureGameExists').yields();
+
+			mafia.listAllPlayersHandler(command);
+			browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+
+			const output = browser.createPost.getCall(0).args[2];
+			output.should.include('yamikuronue');
+			output.should.include('accalia');
+		});
+	});
 });

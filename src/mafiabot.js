@@ -166,7 +166,63 @@ exports.dayHandler = function dayHandler(command) {};
 exports.listVotesHandler = function listVotesHandler(command) {};
 exports.listAllVotesHandler = function listAllVotesHandler(command) {};
 exports.listPlayersHandler = function listPlayersHandler(command) {};
-exports.listAllPlayersHandler = function listAllPlayersHandler(command) {};
+
+exports.listAllPlayersHandler = function listAllPlayersHandler(command) {
+	const id = command.post.topic_id;
+	internals.ensureGameExists(id, () => {
+		const lookupStmt = internals.db.prepare('SELECT id FROM gamesplayers INNER JOIN players ON gamesplayers.player = players.id INNER JOIN player_statuses ON gamesplayers.player_status = player_statuses.id WHERE game = ?')
+		
+		let alive = [];
+		let dead = [];
+
+		lookupStmt.each(id, (err, row) => {
+			if (row) {
+				if (row.status === "alive") {
+					alive.push(row.name);
+				} else if (row.status === "dead") {
+					dead.push(row.name);
+				}
+			} else if (err) {
+				internals.browser.createPost(command.post.topic_id, command.post.post_number, 'Error fetching players: ' + err.toString(), () => 0);
+				return;
+			};
+		}, (err, count) => {
+			if (count > 0) {
+				let numLiving = alive.length;
+				let numDead = dead.length;
+				
+				let output = "##Player List\n";
+				output += "###Living:";
+				if (numLiving <= 0) {
+					output += "Nobody! Aren't you special?\n";
+				} else {
+					for (let i = 0; i < numLiving; i++) {
+						output += "- " + alive[i];
+					}
+				}
+				
+				output += "\n###Dead:"
+				if (numDead <= 0) {
+					output += "Nobody! Aren't you special?\n";
+				} else {
+					for (let i = 0; i < numDead; i++) {
+						output += "- " + dead[i];
+					}
+				}
+				
+				internals.browser.createPost(command.post.topic_id, command.post.post_number, output, () => 0);
+				return;
+			} else if (err) {
+				internals.browser.createPost(command.post.topic_id, command.post.post_number, 'Error fetching players: ' + err.toString(), () => 0);
+				return;
+			} else {
+				internals.browser.createPost(command.post.topic_id, command.post.post_number, 'No players found!', () => 0);
+				return;
+			};
+		});
+	});
+	
+};
 
 function registerCommands(events) {
     events.onCommand('echo', 'echo a bunch of post info (for diagnostic purposes)', exports.echoHandler, () => 0);
