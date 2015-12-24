@@ -53,12 +53,12 @@ exports.createDB = function() {
 					
 		internals.db.run('CREATE TABLE player_statuses (id INTEGER PRIMARY KEY ASC,status TEXT NOT NULL UNIQUE ON CONFLICT IGNORE);'
 		, () => {
-			internals.db.run('INSERT INTO player_statuses (id, status) VALUES (0, alive), (1,dead), (42,mod)');
+			internals.db.run('INSERT INTO player_statuses (id, status) VALUES (0, "alive"), (1,"dead"), (42,"mod")');
 		});
 		
 		internals.db.run('CREATE TABLE game_statuses (id INTEGER PRIMARY KEY ASC,status TEXT NOT NULL UNIQUE ON CONFLICT IGNORE);'
 		, () => {
-			internals.db.run('INSERT INTO game_statuses (id, status) VALUES (0, active), (1,finished)');
+			internals.db.run('INSERT INTO game_statuses (id, status) VALUES (0, "active"), (1,"finished")');
 		});
 		
 		internals.db.run('CREATE TABLE stages (id INTEGER PRIMARY KEY ASC, stage TEXT NOT NULL UNIQUE ON CONFLICT IGNORE);'
