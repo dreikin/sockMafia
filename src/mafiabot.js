@@ -162,7 +162,7 @@ exports.joinHandler = function joinHandler(command) {
 			if (row) {
 				internals.browser.createPost(command.post.topic_id, command.post.post_number, 'You are already in this game, @' + player + '!', () => 0);
 			} else {
-				const insertStmt = internals.db.prepare('INSERT INTO gamesplayers (game, player, player_status) VALUES (?, (SELECT id FROM players WHERE name = ?), (SELECT id FROM player_statuses WHERE status=?))');
+				const insertStmt = internals.db.prepare('INSERT INTO gamesplayers (game, player, player_status) VALUES (?, (SELECT id FROM players WHERE name = "?"), (SELECT id FROM player_statuses WHERE status="?"))');
 				insertStmt.run(id, player, 'alive', (er) => {
 					if (er) {
 						internals.browser.createPost(command.post.topic_id, command.post.post_number, 'Error when adding to game: ' + er, () => 0);
