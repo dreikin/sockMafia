@@ -222,6 +222,7 @@ exports.listAllPlayersHandler = function listAllPlayersHandler(command) {
 
 		lookupStmt.each(id, (err, row) => {
 			if (row) {
+				console.log("DEBUG: " + row.name + " is " + row.status);
 				if (row.status === 'alive') {
 					alive.push(row.name);
 				} else if (row.status === 'dead') {
@@ -237,7 +238,7 @@ exports.listAllPlayersHandler = function listAllPlayersHandler(command) {
 				const numDead = dead.length;
 				
 				let output = '##Player List\n';
-				output += '###Living:';
+				output += '###Living:\n';
 				if (numLiving <= 0) {
 					output += 'Nobody! Aren\'t you special?\n';
 				} else {
@@ -246,7 +247,7 @@ exports.listAllPlayersHandler = function listAllPlayersHandler(command) {
 					}
 				}
 				
-				output += '\n###Dead:';
+				output += '\n###Dead:\n';
 				if (numDead <= 0) {
 					output += 'Nobody! Aren\'t you special?\n';
 				} else {
