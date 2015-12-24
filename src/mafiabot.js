@@ -51,19 +51,31 @@ exports.createDB = function() {
 					
 		internals.db.run('CREATE TABLE IF NOT EXISTS gamesplayers (id INTEGER PRIMARY KEY ASC,game INTEGER NOT NULL REFERENCES games(id),player INTEGER NOT NULL REFERENCES players(id),player_status INTEGER NOT NULL REFERENCES statuses(id),UNIQUE(game, player) ON CONFLICT IGNORE);');
 					
-		internals.db.run('CREATE TABLE IF NOT EXISTS player_statuses (id INTEGER PRIMARY KEY ASC,status TEXT NOT NULL UNIQUE ON CONFLICT IGNORE);'
+		internals.db.run('CREATE TABLE player_statuses (id INTEGER PRIMARY KEY ASC,status TEXT NOT NULL UNIQUE ON CONFLICT IGNORE);'
 		, () => {
-			internals.db.run('INSERT INTO player_statuses (id, status) VALUES (0, "alive"), (1,"dead"), (42,"mod")');
+			internals.db.all('SELECT * FROM game_statuses', (err, data) => {
+				if (!data) {
+					internals.db.run('INSERT INTO player_statuses (id, status) VALUES (0, "alive"), (1,"dead"), (42,"mod")');
+				}
+			});
 		});
 		
 		internals.db.run('CREATE TABLE IF NOT EXISTS game_statuses (id INTEGER PRIMARY KEY ASC,status TEXT NOT NULL UNIQUE ON CONFLICT IGNORE);'
 		, () => {
-			internals.db.run('INSERT INTO game_statuses (id, status) VALUES (0, "active"), (1,"finished")');
+			internals.db.all('SELECT * FROM game_statuses', (err, data) => {
+				if (!data) {
+					internals.db.run('INSERT INTO game_statuses (id, status) VALUES (0, "active"), (1,"finished")');
+				}
+			});
 		});
 		
 		internals.db.run('CREATE TABLE stages (id INTEGER PRIMARY KEY ASC, stage TEXT NOT NULL UNIQUE ON CONFLICT IGNORE);'
 		, () => {
-			internals.db.run('INSERT INTO stages (id, stage) VALUES (0, "day"), (1,"night")');
+			internals.db.all('SELECT * FROM game_statuses', (err, data) => {
+				if (!data) {
+					internals.db.run('INSERT INTO stages (id, stage) VALUES (0, "day"), (1,"night")');
+				}
+			});
 		});
 	});
 	return internals.db;
