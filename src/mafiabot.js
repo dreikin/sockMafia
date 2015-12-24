@@ -63,7 +63,7 @@ exports.createDB = function() {
 		
 		internals.db.run('CREATE TABLE stages (id INTEGER PRIMARY KEY ASC, stage TEXT NOT NULL UNIQUE ON CONFLICT IGNORE);'
 		, () => {
-			internals.db.run('INSERT INTO stages (id, stage) VALUES (0, day), (1,night)');
+			internals.db.run('INSERT INTO stages (id, stage) VALUES (0, "day"), (1,"night")');
 		});
 	});
 	return internals.db;
