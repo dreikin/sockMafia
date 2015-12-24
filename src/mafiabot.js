@@ -130,15 +130,14 @@ const queries = {
 };
 
 exports.createDB = function() {
-    internals.db = new sqlite3.Database(internals.configuration.db, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, () => {
-        internals.db.run(queries.createTable.players);
-        internals.db.run(queries.createTable.player_statuses, () => {internals.db.run(queries.insert.player_statuses);});
-        internals.db.run(queries.createTable.game_statuses, () => {internals.db.run(queries.insert.game_statuses);});
-        internals.db.run(queries.createTable.stages, () => {internals.db.run(queries.insert.stages);});
-        internals.db.run(queries.createTable.games);
-        internals.db.run(queries.createTable.gamesplayers);
-        internals.db.run(queries.createTable.votes);
-    });
+    internals.db = new sqlite3.Database(internals.configuration.db, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, () => {});
+    internals.db.run(queries.createTable.players);
+    internals.db.run(queries.createTable.player_statuses, () => {internals.db.run(queries.insert.player_statuses);});
+    internals.db.run(queries.createTable.game_statuses, () => {internals.db.run(queries.insert.game_statuses);});
+    internals.db.run(queries.createTable.stages, () => {internals.db.run(queries.insert.stages);});
+    internals.db.run(queries.createTable.games);
+    internals.db.run(queries.createTable.gamesplayers);
+    internals.db.run(queries.createTable.votes);
 };
 
 /**
