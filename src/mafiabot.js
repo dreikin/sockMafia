@@ -222,7 +222,6 @@ exports.listAllPlayersHandler = function listAllPlayersHandler(command) {
 
 		lookupStmt.each(id, (err, row) => {
 			if (row) {
-				console.log("DEBUG: " + row.name + " is " + row.status);
 				if (row.status === 'alive') {
 					alive.push(row.name);
 				} else if (row.status === 'dead') {
