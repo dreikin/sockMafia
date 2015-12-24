@@ -242,7 +242,7 @@ exports.listAllPlayersHandler = function listAllPlayersHandler(command) {
 					output += 'Nobody! Aren\'t you special?\n';
 				} else {
 					for (let i = 0; i < numLiving; i++) {
-						output += '- ' + alive[i];
+						output += '- ' + alive[i] + '\n';
 					}
 				}
 				
@@ -251,7 +251,7 @@ exports.listAllPlayersHandler = function listAllPlayersHandler(command) {
 					output += 'Nobody! Aren\'t you special?\n';
 				} else {
 					for (let i = 0; i < numDead; i++) {
-						output += '- ' + dead[i];
+						output += '- ' + dead[i] + '\n';
 					}
 				}
 				
