@@ -215,7 +215,7 @@ exports.listPlayersHandler = function listPlayersHandler(command) {};
 exports.listAllPlayersHandler = function listAllPlayersHandler(command) {
 	const id = command.post.topic_id;
 	internals.ensureGameExists(id, () => {
-		const lookupStmt = internals.db.prepare('SELECT id FROM gamesplayers INNER JOIN players ON gamesplayers.player = players.id INNER JOIN player_statuses ON gamesplayers.player_status = player_statuses.id WHERE game = ?');
+		const lookupStmt = internals.db.prepare('SELECT players.name, gamesplayers.status FROM gamesplayers INNER JOIN players ON gamesplayers.player = players.id INNER JOIN player_statuses ON gamesplayers.player_status = player_statuses.id WHERE game = ?');
 		
 		const alive = [];
 		const dead = [];
