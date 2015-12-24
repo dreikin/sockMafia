@@ -27,7 +27,7 @@ const internals = {
 			}
 			
 			if (!row) {
-				const insertStmt = internals.db.prepare('INSERT INTO games (id, status, current_day, current_stage) VALUES (?, (SELECT id FROM game_statuses WHERE status="active"),0,(SELECT id FROM stages WHERE stage="night")');
+				const insertStmt = internals.db.prepare('INSERT INTO games (id, status, current_day, current_stage) VALUES (?, (SELECT id FROM game_statuses WHERE status="active"),0,(SELECT id FROM stages WHERE stage="night"))');
 				insertStmt.run(id, (er) => {
 					if (er) {
 						callback(er);
