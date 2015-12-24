@@ -189,7 +189,7 @@ exports.joinHandler = function joinHandler(command) {
 						return;
 					}
 					if (!row1) {
-						const insertPlayer = internals.db.prepare('INSERT INTO players (names) VALUES (?)');
+						const insertPlayer = internals.db.prepare('INSERT INTO players (name) VALUES (?)');
 						insertPlayer.run(player, (e) => {
 							if (e) {
 								reportError(e);
