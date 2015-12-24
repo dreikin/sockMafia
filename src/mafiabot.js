@@ -183,16 +183,16 @@ exports.listPlayersHandler = function listPlayersHandler(command) {};
 exports.listAllPlayersHandler = function listAllPlayersHandler(command) {
 	const id = command.post.topic_id;
 	internals.ensureGameExists(id, () => {
-		const lookupStmt = internals.db.prepare('SELECT id FROM gamesplayers INNER JOIN players ON gamesplayers.player = players.id INNER JOIN player_statuses ON gamesplayers.player_status = player_statuses.id WHERE game = ?')
+		const lookupStmt = internals.db.prepare('SELECT id FROM gamesplayers INNER JOIN players ON gamesplayers.player = players.id INNER JOIN player_statuses ON gamesplayers.player_status = player_statuses.id WHERE game = ?');
 		
-		let alive = [];
-		let dead = [];
+		const alive = [];
+		const dead = [];
 
 		lookupStmt.each(id, (err, row) => {
 			if (row) {
-				if (row.status === "alive") {
+				if (row.status === 'alive') {
 					alive.push(row.name);
-				} else if (row.status === "dead") {
+				} else if (row.status === 'dead') {
 					dead.push(row.name);
 				}
 			} else if (err) {
@@ -201,25 +201,25 @@ exports.listAllPlayersHandler = function listAllPlayersHandler(command) {
 			};
 		}, (err, count) => {
 			if (count > 0) {
-				let numLiving = alive.length;
-				let numDead = dead.length;
+				const numLiving = alive.length;
+				const numDead = dead.length;
 				
-				let output = "##Player List\n";
-				output += "###Living:";
+				let output = '##Player List\n';
+				output += '###Living:';
 				if (numLiving <= 0) {
-					output += "Nobody! Aren't you special?\n";
+					output += 'Nobody! Aren\'t you special?\n';
 				} else {
 					for (let i = 0; i < numLiving; i++) {
-						output += "- " + alive[i];
+						output += '- ' + alive[i];
 					}
 				}
 				
-				output += "\n###Dead:"
+				output += '\n###Dead:';
 				if (numDead <= 0) {
-					output += "Nobody! Aren't you special?\n";
+					output += 'Nobody! Aren\'t you special?\n';
 				} else {
 					for (let i = 0; i < numDead; i++) {
-						output += "- " + dead[i];
+						output += '- ' + dead[i];
 					}
 				}
 				
