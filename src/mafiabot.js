@@ -157,19 +157,51 @@ exports.joinHandler = function joinHandler(command) {
 	const player = command.post.username;
 	
 	internals.ensureGameExists(id, () => {
-		const lookupStmt = internals.db.prepare('SELECT gamesplayers.id FROM gamesplayers INNER JOIN players ON gamesplayers.player = players.id WHERE game = ? AND lower(players.name) = "?"');
+		let lookupStmt = internals.db.prepare('SELECT gamesplayers.id FROM gamesplayers INNER JOIN players ON gamesplayers.player = players.id WHERE game = ? AND lower(players.name) = "?"');
+		
+		const reportError = (error) => {
+			internals.browser.createPost(command.post.topic_id, command.post.post_number, 'Error when adding to game: ' + error, () => 0);
+		};
+		
+		const runInsert = () => {
+			const insertStmt = internals.db.prepare('INSERT INTO gamesplayers (game, player, player_status) VALUES (?, (SELECT id FROM players WHERE name = ?), (SELECT id FROM player_statuses WHERE status=?))');
+			insertStmt.run(id, player, 'alive', (er) => {
+				if (er) {
+					reportError(er);
+				} else {
+					internals.browser.createPost(command.post.topic_id, command.post.post_number, 'Welcome to the game, @' + player, () => 0);
+				}
+			});
+		};
+		
 		lookupStmt.get(id, player.toLowerCase(), (err, row) => {
+			if (err) {
+				reportError(err);
+				return;
+			}
 			if (row) {
 				internals.browser.createPost(command.post.topic_id, command.post.post_number, 'You are already in this game, @' + player + '!', () => 0);
 			} else {
-				const insertStmt = internals.db.prepare('INSERT INTO gamesplayers (game, player, player_status) VALUES (?, (SELECT id FROM players WHERE name = ?), (SELECT id FROM player_statuses WHERE status=?))');
-				insertStmt.run(id, player, 'alive', (er) => {
+				lookupStmt = internals.db.prepare('SELECT players.id FROM players WHERE lower(players.name) = "?"');
+				lookupStmt.get(player, (er, row1) => {
 					if (er) {
-						internals.browser.createPost(command.post.topic_id, command.post.post_number, 'Error when adding to game: ' + er, () => 0);
+						reportError(er);
+						return;
+					}
+					if (!row1) {
+						const insertPlayer = internals.db.prepare('INSERT INTO players (names) VALUES (?)');
+						insertPlayer.run(player, (e) => {
+							if (e) {
+								reportError(e);
+								return;
+							}
+							runInsert();
+						});
 					} else {
-						internals.browser.createPost(command.post.topic_id, command.post.post_number, 'Welcome to the game, @' + player, () => 0);
+						runInsert();
 					}
 				});
+				
 			};
 		});
 	});
