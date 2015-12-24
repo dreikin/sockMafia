@@ -256,9 +256,9 @@ describe('mafia', () => {
 			};
 			
 			const players = [
-				{"name": "yamikuronue", "status": "alive"},
-				{"name": "accalia", "status": "dead"}
-			]
+				{'name': 'yamikuronue', 'status': 'alive'},
+				{'name': 'accalia', 'status': 'dead'}
+			];
 
 			const runMock = {
 				each: (_, callback, complete) => {
