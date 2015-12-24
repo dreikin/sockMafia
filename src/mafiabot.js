@@ -157,7 +157,7 @@ exports.joinHandler = function joinHandler(command) {
 	const player = command.post.username;
 	
 	internals.ensureGameExists(id, () => {
-		let lookupStmt = internals.db.prepare('SELECT gamesplayers.id FROM gamesplayers INNER JOIN players ON gamesplayers.player = players.id WHERE game = ? AND lower(players.name) = "?"');
+		let lookupStmt = internals.db.prepare('SELECT gamesplayers.id FROM gamesplayers INNER JOIN players ON gamesplayers.player = players.id WHERE game = ? AND lower(players.name) = ?');
 		
 		const reportError = (error) => {
 			internals.browser.createPost(command.post.topic_id, command.post.post_number, 'Error when adding to game: ' + error, () => 0);
@@ -182,7 +182,7 @@ exports.joinHandler = function joinHandler(command) {
 			if (row) {
 				internals.browser.createPost(command.post.topic_id, command.post.post_number, 'You are already in this game, @' + player + '!', () => 0);
 			} else {
-				lookupStmt = internals.db.prepare('SELECT players.id FROM players WHERE lower(players.name) = "?"');
+				lookupStmt = internals.db.prepare('SELECT players.id FROM players WHERE lower(players.name) = ?');
 				lookupStmt.get(player, (er, row1) => {
 					if (er) {
 						reportError(er);
