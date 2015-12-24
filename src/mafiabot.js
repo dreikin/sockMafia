@@ -157,7 +157,7 @@ exports.joinHandler = function joinHandler(command) {
 	const player = command.post.username;
 	
 	internals.ensureGameExists(id, () => {
-		const lookupStmt = internals.db.prepare('SELECT id FROM gamesplayers INNER JOIN players ON gamesplayers.player = players.id WHERE game = ? AND lower(player.name) = "?"');
+		const lookupStmt = internals.db.prepare('SELECT gamesplayers.id FROM gamesplayers INNER JOIN players ON gamesplayers.player = players.id WHERE game = ? AND lower(player.name) = "?"');
 		lookupStmt.get(id, player.toLowerCase(), (err, row) => {
 			if (row) {
 				internals.browser.createPost(command.post.topic_id, command.post.post_number, 'You are already in this game, @' + player + '!', () => 0);
