@@ -45,18 +45,18 @@ exports.internals = internals;
 
 exports.createDB = function() {
 	internals.db = new sqlite3.Database(internals.configuration.db, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, () => {
-		internals.db.run('CREATE TABLE players (id INTEGER PRIMARY KEY ASC,	name TEXT NOT NULL UNIQUE ON CONFLICT IGNORE)');
+		internals.db.run('CREATE TABLE IF NOT EXISTS players (id INTEGER PRIMARY KEY ASC,	name TEXT NOT NULL UNIQUE ON CONFLICT IGNORE)');
 						
-		internals.db.run('CREATE TABLE games (id INTEGER PRIMARY KEY ASC,status INTEGER NOT NULL REFERENCES statuses(id),current_day INTEGER NOT NULL DEFAULT 0,current_stage INTEGER NOT NULL REFERENCES stages(id),name TEXT);');
+		internals.db.run('CREATE TABLE IF NOT EXISTS games (id INTEGER PRIMARY KEY ASC,status INTEGER NOT NULL REFERENCES statuses(id),current_day INTEGER NOT NULL DEFAULT 0,current_stage INTEGER NOT NULL REFERENCES stages(id),name TEXT);');
 					
-		internals.db.run('CREATE TABLE gamesplayers (id INTEGER PRIMARY KEY ASC,game INTEGER NOT NULL REFERENCES games(id),player INTEGER NOT NULL REFERENCES players(id),player_status INTEGER NOT NULL REFERENCES statuses(id),UNIQUE(game, player) ON CONFLICT IGNORE);');
+		internals.db.run('CREATE TABLE IF NOT EXISTS gamesplayers (id INTEGER PRIMARY KEY ASC,game INTEGER NOT NULL REFERENCES games(id),player INTEGER NOT NULL REFERENCES players(id),player_status INTEGER NOT NULL REFERENCES statuses(id),UNIQUE(game, player) ON CONFLICT IGNORE);');
 					
-		internals.db.run('CREATE TABLE player_statuses (id INTEGER PRIMARY KEY ASC,status TEXT NOT NULL UNIQUE ON CONFLICT IGNORE);'
+		internals.db.run('CREATE TABLE IF NOT EXISTS player_statuses (id INTEGER PRIMARY KEY ASC,status TEXT NOT NULL UNIQUE ON CONFLICT IGNORE);'
 		, () => {
 			internals.db.run('INSERT INTO player_statuses (id, status) VALUES (0, "alive"), (1,"dead"), (42,"mod")');
 		});
 		
-		internals.db.run('CREATE TABLE game_statuses (id INTEGER PRIMARY KEY ASC,status TEXT NOT NULL UNIQUE ON CONFLICT IGNORE);'
+		internals.db.run('CREATE TABLE IF NOT EXISTS game_statuses (id INTEGER PRIMARY KEY ASC,status TEXT NOT NULL UNIQUE ON CONFLICT IGNORE);'
 		, () => {
 			internals.db.run('INSERT INTO game_statuses (id, status) VALUES (0, "active"), (1,"finished")');
 		});
