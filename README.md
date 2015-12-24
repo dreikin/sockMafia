@@ -1,11 +1,12 @@
 [![Dependency Status](https://david-dm.org/yamikuronue/sockMafia/master.svg)](https://david-dm.org/yamikuronue/sockMafia/master)
 [![devDependency Status](https://david-dm.org/yamikuronue/sockMafia/master/dev-status.svg)](https://david-dm.org/yamikuronue/sockMafia/master#info=devDependencies)
 [![optionalDependency Status](https://david-dm.org/yamikuronue/sockMafia/master/optional-status.svg)](https://david-dm.org/yamikuronue/sockMafia/master#info=optionalDependencies)
+[![Build Status](https://travis-ci.org/yamikuronue/sockMafia.svg?branch=master)](https://travis-ci.org/yamikuronue/sockMafia)
 
 
-#SockBot Markov
+#SockBot Mafia
 
-Markov plugin for [SockBot](https://sockbot.rtfd.org/en/latest/) version 2.10.0 or later.
+Mafia plugin for [SockBot](https://sockbot.rtfd.org/en/latest/) version 2.10.0 or later.
 
 ##Usage
 
