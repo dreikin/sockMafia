@@ -78,6 +78,8 @@ function initialise(config) {
 	}).then(() => {
 		console.log('Mafia: Synching database');
 		db.sync();
+	}).then( () => {
+		console.log('Mafia: Sync complete. Your database is ready to go.');
 	}).catch((err) => {
 		console.err('Mafia: ' + err);
 		throw err;
@@ -95,7 +97,7 @@ module.exports = {
 	},
 	
 	ensureGameExists: function(id) {
-		return Models.games.findOrCreate({where: {id: id}, defaults: {status: 'active', currentDay: 0, stage: 'night'}});
+		return Models.games.findOrCreate({where: {id: id}, defaults: {status: 'prep', currentDay: 0, stage: 'night'}});
 	},
 	
 	isPlayerInGame: function(game, player) {
