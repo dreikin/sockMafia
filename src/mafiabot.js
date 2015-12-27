@@ -10,6 +10,7 @@
  */
 
 const sqlite3 = require('sqlite3');
+const DAO = require('./dao.js');
 
 const internals = {
     browser: null,
