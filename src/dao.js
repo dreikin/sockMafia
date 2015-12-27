@@ -61,13 +61,25 @@ function createModel(config) {
     Models.votes = vote;
 	
 	initialised = true;
-};
+}
 
+/*eslint-disable no-console*/
 function initialise(config) {
-	return new Promise(() => checkConfig(config))
-	.then(() => createModel(config))
-	.then(() => db.sync());
+	return new Promise(() => {
+		console.log('Mafia: Checking configuration');
+		checkConfig(config);
+		console.log('Mafia: Configuration valid');
+	})
+	.then(() => {
+		console.log('Mafia: Creating database');
+		createModel(config);
+	})
+	.then(() => {
+		console.log('Mafia: Synching database');
+		db.sync();
+	});
 };
+/*eslint-enable no-console*/
 
 module.exports = {
 	createDB: function(config) {
