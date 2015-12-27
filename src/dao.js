@@ -110,7 +110,7 @@ module.exports = {
 		let insPlayer;
 		return Models.players.findOrCreate({where: {name: player}}).then((playerInstance) => {
 			insPlayer = playerInstance;
-			return Models.games.findById(game, {include: {model: Models.roster, as: 'Roster'}});
+			return Models.games.findById(game, {include: [{model: Models.roster, as: 'Roster'}]});
 		}).then( (gameInstance) => {
 			return gameInstance.addAssociation(insPlayer, {player_status: 'alive'});
 		}).then(db.sync());		
