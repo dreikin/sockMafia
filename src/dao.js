@@ -97,7 +97,7 @@ module.exports = {
 	},
 	
 	ensureGameExists: function(id) {
-		return Models.games.findOrCreate({where: {id: id}, defaults: {status: 'prep', currentDay: 0, stage: 'night'}});
+		return Models.games.findOrCreate({where: {id: id}, defaults: {status: 'prep', currentDay: 0, current_stage: 'night'}});
 	},
 	
 	isPlayerInGame: function(game, player) {
