@@ -8,12 +8,6 @@ const Models = {};
 let initialised = false;
 let db;
 
-function initialise(config) {
-	return new Promise(checkConfig(config))
-	.then(createModel)
-	.then(db.sync());
-};
-
 function checkConfig(config) {
     if (!config) {
         throw new Error('Configuration information must be supplied.');
@@ -69,6 +63,14 @@ function createModel(config) {
 	initialised = true;
 };
 
+function initialise(config) {
+	return new Promise((resolve, reject) => {
+		checkConfig(config);
+		resolve();
+	})
+	.then(() => createModel)
+	.then(() => db.sync);
+};
 
 module.exports = {
 	createDB: function(config) {

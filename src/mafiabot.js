@@ -199,6 +199,7 @@ exports.prepare = function prepare(plugConfig, config, events, browser) {
     internals.events = events;
     internals.browser = browser;
     internals.configuration = config.mergeObjects(true, exports.defaultConfig, plugConfig);
+	dao.createDB(internals.configuration);
     events.onNotification('mentioned', exports.mentionHandler);
     registerCommands(events);
 };
