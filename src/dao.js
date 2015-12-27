@@ -65,8 +65,8 @@ function createModel(config) {
 
 function initialise(config) {
 	return new Promise(() => checkConfig(config))
-	.then(() => createModel)
-	.then(() => db.sync);
+	.then(() => createModel(config))
+	.then(() => db.sync());
 };
 
 module.exports = {
