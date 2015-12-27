@@ -1,32 +1,15 @@
-const Sequelize = require('sequelize');
+/**
+ * Heavily borrowed from https://github.com/SockDrawer/SockRPG
+ */
 
-var sequelize = new Sequelize('database', 'username', 'password', {
-  host: 'localhost',
-  dialect: 'mysql'|'mariadb'|'sqlite'|'postgres'|'mssql',
+const db = require('./models/db');
 
-  pool: {
-    max: 5,
-    min: 0,
-    idle: 10000
-  },
+let initialised = false;
 
-  // SQLite only
-  storage: 'path/to/database.sqlite'
-});
-
-/* Models*/
-var Player = sequelize.define('player', {
-  name: {
-    type: Sequelize.STRING
-  }
-}, {
-  freezeTableName: true
-});
-
-User.sync({force: true}).then(function () {
-  // Table created
-  return User.create({
-    firstName: 'John',
-    lastName: 'Hancock'
-  });
-});
+function initialise(config) {
+    return initialised
+        ? Promise.resolve()
+        : db.initialise(config).then(() => {
+            initialised = true;
+        });
+}
