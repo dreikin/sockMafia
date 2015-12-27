@@ -199,7 +199,6 @@ exports.prepare = function prepare(plugConfig, config, events, browser) {
     internals.events = events;
     internals.browser = browser;
     internals.configuration = config.mergeObjects(true, exports.defaultConfig, plugConfig);
-    internals.db = exports.createDB();
     events.onNotification('mentioned', exports.mentionHandler);
     registerCommands(events);
 };
