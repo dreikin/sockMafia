@@ -95,7 +95,9 @@ exports.joinHandler = function joinHandler(command) {
 	const player = command.post.username;
 	
 	const reportError = (error) => {
-		internals.browser.createPost(command.post.topic_id, command.post.post_number, 'Error when adding to game: ' + error, () => 0);
+		internals.browser.createPost(command.post.topic_id,
+									command.post.post_number,
+									'Error when adding to game: ' + error, () => 0);
 	};
 	
 	return dao.ensureGameExists(id)
@@ -106,7 +108,9 @@ exports.joinHandler = function joinHandler(command) {
 			return Promise.resolve();
 		} else {
 			return dao.addPlayerToGame(id, player.toLowerCase).then(() => {
-				internals.browser.createPost(command.post.topic_id, command.post.post_number, 'Welcome to the game, @' + player, () => 0);
+				internals.browser.createPost(command.post.topic_id,
+												command.post.post_number,
+												'Welcome to the game, @' + player, () => 0);
 			});
 		}
 	})
@@ -124,7 +128,9 @@ exports.listPlayersHandler = function listPlayersHandler(command) {};
 exports.listAllPlayersHandler = function listAllPlayersHandler(command) {
 	const id = command.post.topic_id;
 	const reportError = (error) => {
-		internals.browser.createPost(command.post.topic_id, command.post.post_number, 'Error resolving list: ' + error, () => 0);
+		internals.browser.createPost(command.post.topic_id,
+									command.post.post_number,
+									'Error resolving list: ' + error, () => 0);
 	};
 	return dao.ensureGameExists(id)
 	.then(() => dao.getPlayers(id))
@@ -164,6 +170,8 @@ exports.listAllPlayersHandler = function listAllPlayersHandler(command) {
 		
 		internals.browser.createPost(command.post.topic_id, command.post.post_number, output, () => 0);
 		return Promise.resolve();
+	}).catch((err) => {
+		reportError(err);
 	});
 };
 

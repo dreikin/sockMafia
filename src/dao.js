@@ -65,16 +65,15 @@ function createModel(config) {
 
 /*eslint-disable no-console*/
 function initialise(config) {
-	return new Promise(() => {
+	return new Promise((resolve) => {
 		console.log('Mafia: Checking configuration');
 		checkConfig(config);
 		console.log('Mafia: Configuration valid');
-	})
-	.then(() => {
+		resolve();
+	}).then(() => {
 		console.log('Mafia: Creating database');
 		createModel(config);
-	})
-	.then(() => {
+	}).then(() => {
 		console.log('Mafia: Synching database');
 		db.sync();
 	});
