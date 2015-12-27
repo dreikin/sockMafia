@@ -77,7 +77,7 @@ function initialise(config) {
 		console.log('Mafia: Database created');
 	}).then(() => {
 		console.log('Mafia: Synching database');
-		db.sync();
+		db.sync({force: true});
 	}).then( () => {
 		console.log('Mafia: Sync complete. Your database is ready to go.');
 	}).catch((err) => {
