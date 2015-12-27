@@ -3,10 +3,16 @@
 
 const chai = require('chai'),
 	sinon = require('sinon');
+	
+//promise library plugins
+require('sinon-as-promised');
+require('chai-as-promised');
+
 chai.should();
 const expect = chai.expect;
 
 const mafia = require('../src/mafiabot');
+const mafiaDAO = require('../src/dao.js');
 
 const fakeConfig = {
 	mergeObjects: sinon.stub().returns({
@@ -150,23 +156,18 @@ describe('mafia', () => {
 				}
 			};
 
-			const runMock = {
-				//Returns no error but a conflicting row
-				get: sandbox.stub().yields(false, [1])
-			};
-			const dbMock = {
-				prepare: sandbox.stub().returns(runMock)
-			};
-
+			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
+			sandbox.stub(mafiaDAO, 'addPlayerToGame').resolves();
 			mafia.internals.browser = browser;
-			mafia.internals.db = dbMock;
-			sandbox.stub(mafia.internals, 'ensureGameExists').yields();
 
-			mafia.joinHandler(command);
-			browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
-
-			const output = browser.createPost.getCall(0).args[2];
-			output.should.include('You are already in this game, @tehNinja!');
+			return mafia.joinHandler(command).then( () => {
+				mafiaDAO.addPlayerToGame.called.should.be.false;
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+				
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('You are already in this game, @tehNinja!');
+			});
 		});
 
 		it('should report errors', () => {
@@ -181,23 +182,19 @@ describe('mafia', () => {
 				}
 			};
 
-			const runMock = {
-				get: sandbox.stub().yields(false, false),
-				run: sandbox.stub().yields('Teh db asploded') //error on insert
-			};
-			const dbMock = {
-				prepare: sandbox.stub().returns(runMock)
-			};
-
+			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(false);
+			sandbox.stub(mafiaDAO, 'addPlayerToGame').rejects('I AM ERROR');
+			
 			mafia.internals.browser = browser;
-			mafia.internals.db = dbMock;
-			sandbox.stub(mafia.internals, 'ensureGameExists').yields();
 
-			mafia.joinHandler(command);
-			browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+			return mafia.joinHandler(command).then( () => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
 
-			const output = browser.createPost.getCall(0).args[2];
-			output.should.include('Error when adding to game:');
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('Error when adding to game:');
+			});
+
 		});
 
 		it('should facilitate joining', () => {
@@ -211,25 +208,18 @@ describe('mafia', () => {
 					'post_number': 98765
 				}
 			};
-
-			const runMock = {
-				//Always returns no error and no output
-				get: sandbox.stub().yields(false, false),
-				run: sandbox.stub().yields(false, false)
-			};
-			const dbMock = {
-				prepare: sandbox.stub().returns(runMock)
-			};
+			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(false);
+			sandbox.stub(mafiaDAO, 'addPlayerToGame').resolves();
 
 			mafia.internals.browser = browser;
-			mafia.internals.db = dbMock;
-			sandbox.stub(mafia.internals, 'ensureGameExists').yields();
 
-			mafia.joinHandler(command);
-			browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+			return mafia.joinHandler(command).then( () => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
 
-			const output = browser.createPost.getCall(0).args[2];
-			output.should.include('Welcome to the game, @tehNinja');
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('Welcome to the game, @tehNinja');
+			});
 		});
 	});
 	
@@ -260,28 +250,19 @@ describe('mafia', () => {
 				{'name': 'accalia', 'status': 'dead'}
 			];
 
-			const runMock = {
-				each: (_, callback, complete) => {
-					callback(null, players[0]);
-					callback(null, players[1]);
-					complete(null, 2);
-				},
-				run: sandbox.stub().yields(false, false)
-			};
-			const dbMock = {
-				prepare: sandbox.stub().returns(runMock)
-			};
 
+			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
+			sandbox.stub(mafiaDAO, 'getPlayers').resolves(players);
+			
 			mafia.internals.browser = browser;
-			mafia.internals.db = dbMock;
-			sandbox.stub(mafia.internals, 'ensureGameExists').yields();
 
-			mafia.listAllPlayersHandler(command);
-			browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
-
-			const output = browser.createPost.getCall(0).args[2];
-			output.should.include('yamikuronue');
-			output.should.include('accalia');
+			return mafia.listAllPlayersHandler(command).then(() => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+				
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('yamikuronue');
+				output.should.include('accalia');
+			});
 		});
 	});
 });

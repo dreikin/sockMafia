@@ -22,6 +22,11 @@ module.exports = (db) => {
             type: orm.TEXT,
             allowNull: false
         },
+		//
+		currentDay: {
+            type: orm.INTEGER,
+            allowNull: false
+        },
         // Human-friendly game name
         name: {
             type: orm.TEXT,

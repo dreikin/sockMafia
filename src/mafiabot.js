@@ -9,78 +9,16 @@
  * @license MIT
  */
 
-const sqlite3 = require('sqlite3');
-const DAO = require('./dao.js');
+const dao = require('./dao.js');
 
 const internals = {
     browser: null,
     configuration: exports.defaultConfig,
     timeouts: {},
     interval: null,
-    events: null,
-    db: null,
-	ensureGameExists: function(id, callback) {
-		const lookupStmt = internals.db.prepare('SELECT id FROM games WHERE id = ?');
-		lookupStmt.get(id, (err, row) => {
-			if (err) {
-				callback(err);
-				return;
-			}
-			
-			if (!row) {
-				const insertStmt = internals.db.prepare('INSERT INTO games (id, status, current_day, current_stage) VALUES (?, (SELECT id FROM game_statuses WHERE status="active"),0,(SELECT id FROM stages WHERE stage="night"))');
-				insertStmt.run(id, (er) => {
-					if (er) {
-						callback(er);
-					} else {
-						callback();
-					}
-				});
-			} else {
-				callback();
-			}
-		});
-	}
+    events: null
 };
 exports.internals = internals;
-
-exports.createDB = function() {
-	internals.db = new sqlite3.Database(internals.configuration.db, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, () => {
-		internals.db.run('CREATE TABLE IF NOT EXISTS players (id INTEGER PRIMARY KEY ASC,	name TEXT NOT NULL UNIQUE ON CONFLICT IGNORE)');
-						
-		internals.db.run('CREATE TABLE IF NOT EXISTS games (id INTEGER PRIMARY KEY ASC,status INTEGER NOT NULL REFERENCES statuses(id),current_day INTEGER NOT NULL DEFAULT 0,current_stage INTEGER NOT NULL REFERENCES stages(id),name TEXT);');
-					
-		internals.db.run('CREATE TABLE IF NOT EXISTS gamesplayers (id INTEGER PRIMARY KEY ASC,game INTEGER NOT NULL REFERENCES games(id),player INTEGER NOT NULL REFERENCES players(id),player_status INTEGER NOT NULL REFERENCES statuses(id),UNIQUE(game, player) ON CONFLICT IGNORE);');
-					
-		internals.db.run('CREATE TABLE player_statuses (id INTEGER PRIMARY KEY ASC,status TEXT NOT NULL UNIQUE ON CONFLICT IGNORE);'
-		, () => {
-			internals.db.all('SELECT * FROM game_statuses', (err, data) => {
-				if (!data) {
-					internals.db.run('INSERT INTO player_statuses (id, status) VALUES (0, "alive"), (1,"dead"), (42,"mod")');
-				}
-			});
-		});
-		
-		internals.db.run('CREATE TABLE IF NOT EXISTS game_statuses (id INTEGER PRIMARY KEY ASC,status TEXT NOT NULL UNIQUE ON CONFLICT IGNORE);'
-		, () => {
-			internals.db.all('SELECT * FROM game_statuses', (err, data) => {
-				if (!data) {
-					internals.db.run('INSERT INTO game_statuses (id, status) VALUES (0, "active"), (1,"finished")');
-				}
-			});
-		});
-		
-		internals.db.run('CREATE TABLE stages (id INTEGER PRIMARY KEY ASC, stage TEXT NOT NULL UNIQUE ON CONFLICT IGNORE);'
-		, () => {
-			internals.db.all('SELECT * FROM game_statuses', (err, data) => {
-				if (!data) {
-					internals.db.run('INSERT INTO stages (id, stage) VALUES (0, "day"), (1,"night")');
-				}
-			});
-		});
-	});
-	return internals.db;
-};
 
 /**
  * Default plugin configuration
@@ -153,60 +91,30 @@ exports.voteHandler = function voteHandler(command) {
 };
 
 exports.joinHandler = function joinHandler(command) {
-	//Check for already existing
 	const id = command.post.topic_id;
 	const player = command.post.username;
 	
-	internals.ensureGameExists(id, () => {
-		let lookupStmt = internals.db.prepare('SELECT gamesplayers.id FROM gamesplayers INNER JOIN players ON gamesplayers.player = players.id WHERE game = ? AND lower(players.name) = ?');
-		
-		const reportError = (error) => {
-			internals.browser.createPost(command.post.topic_id, command.post.post_number, 'Error when adding to game: ' + error, () => 0);
-		};
-		
-		const runInsert = () => {
-			const insertStmt = internals.db.prepare('INSERT INTO gamesplayers (game, player, player_status) VALUES (?, (SELECT id FROM players WHERE name = ?), (SELECT id FROM player_statuses WHERE status=?))');
-			insertStmt.run(id, player, 'alive', (er) => {
-				if (er) {
-					reportError(er);
-				} else {
-					internals.browser.createPost(command.post.topic_id, command.post.post_number, 'Welcome to the game, @' + player, () => 0);
-				}
+	const reportError = (error) => {
+		internals.browser.createPost(command.post.topic_id, command.post.post_number, 'Error when adding to game: ' + error, () => 0);
+	};
+	
+	return dao.ensureGameExists(id)
+	.then(() => dao.isPlayerInGame(id, player.toLowerCase))
+	.then((answer) => {
+		if (answer) {
+			reportError('You are already in this game, @' + player + '!');
+			return Promise.resolve();
+		} else {
+			return dao.addPlayerToGame(id, player.toLowerCase).then(() => {
+				internals.browser.createPost(command.post.topic_id, command.post.post_number, 'Welcome to the game, @' + player, () => 0);
 			});
-		};
-		
-		lookupStmt.get(id, player.toLowerCase(), (err, row) => {
-			if (err) {
-				reportError(err);
-				return;
-			}
-			if (row) {
-				internals.browser.createPost(command.post.topic_id, command.post.post_number, 'You are already in this game, @' + player + '!', () => 0);
-			} else {
-				lookupStmt = internals.db.prepare('SELECT players.id FROM players WHERE lower(players.name) = ?');
-				lookupStmt.get(player, (er, row1) => {
-					if (er) {
-						reportError(er);
-						return;
-					}
-					if (!row1) {
-						const insertPlayer = internals.db.prepare('INSERT INTO players (name) VALUES (?)');
-						insertPlayer.run(player, (e) => {
-							if (e) {
-								reportError(e);
-								return;
-							}
-							runInsert();
-						});
-					} else {
-						runInsert();
-					}
-				});
-				
-			};
-		});
+		}
+	})
+	.catch((err) => {
+		reportError(err);
 	});
 };
+
 exports.killHandler = function killHandler(command) {};
 exports.dayHandler = function dayHandler(command) {};
 exports.listVotesHandler = function listVotesHandler(command) {};
@@ -215,59 +123,48 @@ exports.listPlayersHandler = function listPlayersHandler(command) {};
 
 exports.listAllPlayersHandler = function listAllPlayersHandler(command) {
 	const id = command.post.topic_id;
-	internals.ensureGameExists(id, () => {
-		const lookupStmt = internals.db.prepare('SELECT players.name, player_statuses.status FROM gamesplayers INNER JOIN players ON gamesplayers.player = players.id INNER JOIN player_statuses ON gamesplayers.player_status = player_statuses.id WHERE game = ?');
-		
+	const reportError = (error) => {
+		internals.browser.createPost(command.post.topic_id, command.post.post_number, 'Error resolving list: ' + error, () => 0);
+	};
+	return dao.ensureGameExists(id)
+	.then(() => dao.getPlayers(id))
+	.then( (rows) => {
 		const alive = [];
 		const dead = [];
-
-		lookupStmt.each(id, (err, row) => {
-			if (row) {
-				if (row.status === 'alive') {
-					alive.push(row.name);
-				} else if (row.status === 'dead') {
-					dead.push(row.name);
-				}
-			} else if (err) {
-				internals.browser.createPost(command.post.topic_id, command.post.post_number, 'Error fetching players: ' + err.toString(), () => 0);
-				return;
-			};
-		}, (err, count) => {
-			if (count > 0) {
-				const numLiving = alive.length;
-				const numDead = dead.length;
-				
-				let output = '##Player List\n';
-				output += '###Living:\n';
-				if (numLiving <= 0) {
-					output += 'Nobody! Aren\'t you special?\n';
-				} else {
-					for (let i = 0; i < numLiving; i++) {
-						output += '- ' + alive[i] + '\n';
-					}
-				}
-				
-				output += '\n###Dead:\n';
-				if (numDead <= 0) {
-					output += 'Nobody! Aren\'t you special?\n';
-				} else {
-					for (let i = 0; i < numDead; i++) {
-						output += '- ' + dead[i] + '\n';
-					}
-				}
-				
-				internals.browser.createPost(command.post.topic_id, command.post.post_number, output, () => 0);
-				return;
-			} else if (err) {
-				internals.browser.createPost(command.post.topic_id, command.post.post_number, 'Error fetching players: ' + err.toString(), () => 0);
-				return;
-			} else {
-				internals.browser.createPost(command.post.topic_id, command.post.post_number, 'No players found!', () => 0);
-				return;
-			};
+		
+		rows.forEach((row) => {
+			if (row.status === 'alive') {
+				alive.push(row.name);
+			} else if (row.status === 'dead') {
+				dead.push(row.name);
+			}
 		});
+		
+		const numLiving = alive.length;
+		const numDead = dead.length;
+		
+		let output = '##Player List\n';
+		output += '###Living:\n';
+		if (numLiving <= 0) {
+			output += 'Nobody! Aren\'t you special?\n';
+		} else {
+			for (let i = 0; i < numLiving; i++) {
+				output += '- ' + alive[i] + '\n';
+			}
+		}
+		
+		output += '\n###Dead:\n';
+		if (numDead <= 0) {
+			output += 'Nobody! Aren\'t you special?\n';
+		} else {
+			for (let i = 0; i < numDead; i++) {
+				output += '- ' + dead[i] + '\n';
+			}
+		}
+		
+		internals.browser.createPost(command.post.topic_id, command.post.post_number, output, () => 0);
+		return Promise.resolve();
 	});
-	
 };
 
 function registerCommands(events) {
