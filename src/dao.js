@@ -34,20 +34,21 @@ function createModel(config) {
 		});
 		
     // Tables
-    const player = require('./player')(db);
-    const game = require('./game')(db);
-    const segment = require('./segment')(db);
-    const roster = require('./roster')(db);
-    const vote = require('./vote')(db);
+    const player = require('./models/player')(db);
+    const game = require('./models/game')(db);
+    const segment = require('./models/segment')(db);
+    const roster = require('./models/roster')(db);
+    const vote = require('./models/vote')(db);
+	
 
     // Relations
     // |- 1:1
-    segment.hasOne(game);
+    //segment.hasOne(game);
     // |- 1:N
     player.hasMany(vote, {as: 'voter'});
     player.hasMany(vote, {as: 'target'});
     game.hasMany(vote);
-    game.hasMany(segment);
+   // game.hasMany(segment);
     // |- M:N
     player.belongsToMany(game, {through: roster});
     game.belongsToMany(player, {through: roster});
@@ -73,9 +74,13 @@ function initialise(config) {
 	}).then(() => {
 		console.log('Mafia: Creating database');
 		createModel(config);
+		console.log('Mafia: Database created');
 	}).then(() => {
 		console.log('Mafia: Synching database');
 		db.sync();
+	}).catch((err) => {
+		console.err('Mafia: ' + err);
+		throw err;
 	});
 };
 /*eslint-enable no-console*/
