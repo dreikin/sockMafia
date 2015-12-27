@@ -64,10 +64,7 @@ function createModel(config) {
 };
 
 function initialise(config) {
-	return new Promise((resolve, reject) => {
-		checkConfig(config);
-		resolve();
-	})
+	return new Promise(() => checkConfig(config))
 	.then(() => createModel)
 	.then(() => db.sync);
 };
