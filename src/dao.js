@@ -101,14 +101,14 @@ module.exports = {
 	},
 	
 	isPlayerInGame: function(game, player) {
-		return Models.games.findOne({where: {player: player}}).then((playerInstance) => {
+		return Models.games.findOne({where: {player: '' + player}}).then((playerInstance) => {
 			return playerInstance !== null;
 		});
 	},
 	
 	addPlayerToGame: function(game, player) {
 		let insPlayer;
-		return Models.players.findOrCreate({where: {name: player}}).then((playerInstance) => {
+		return Models.players.findOrCreate({where: {name: '' + player}}).then((playerInstance) => {
 			insPlayer = playerInstance;
 			return Models.games.findById(game, {include: [{model: Models.roster, as: 'Roster'}]});
 		}).then( (gameInstance) => {
