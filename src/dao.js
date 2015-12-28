@@ -102,7 +102,7 @@ module.exports = {
 	},
 	
 	isPlayerInGame: function(game, player) {
-		sequelize.query('SELECT gameID FROM `rosters` INNER JOIN players ON players.playerID = rosters.playerID WHERE players.name=' + player + ' and gameID=' + game, { type: sequelize.QueryTypes.SELECT})
+		orm.query('SELECT gameID FROM `rosters` INNER JOIN players ON players.playerID = rosters.playerID WHERE players.name=' + player + ' and gameID=' + game, { type: orm.QueryTypes.SELECT})
 		  .then(function(rows) {
 			return rows.length > 0;
 		  })
