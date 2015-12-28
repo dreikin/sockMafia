@@ -114,8 +114,8 @@ module.exports = {
 	addPlayerToGame: function(game, player) {
 		let insPlayer;
 		return Models.players.findOrCreate({where: {name: '' + player}}).then((playerInstance) => {
-			insPlayer = playerInstance;
-			return db.query('INSERT INTO rosters (playerId,gameId) VALUES (' + playerInstance.id + ',' + game + ')', { type: db.QueryTypes.INSERT})
+			insPlayer = playerInstance[0];
+			return db.query('INSERT INTO rosters (playerId,gameId) VALUES ($playerId, $gameId)', { type: db.QueryTypes.INSERT, bind: { 'playerId': insPlayer.id, 'gameId': game}})
 		}).then(db.sync());		
 	},
 	
