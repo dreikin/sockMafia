@@ -101,13 +101,13 @@ exports.joinHandler = function joinHandler(command) {
 	};
 	
 	return dao.ensureGameExists(id)
-	.then(() => dao.isPlayerInGame(id, player.toLowerCase))
+	.then(() => dao.isPlayerInGame(id, player.toLowerCase()))
 	.then((answer) => {
 		if (answer) {
 			reportError('You are already in this game, @' + player + '!');
 			return Promise.resolve();
 		} else {
-			return dao.addPlayerToGame(id, player.toLowerCase).then(() => {
+			return dao.addPlayerToGame(id, player.toLowerCase()).then(() => {
 				internals.browser.createPost(command.post.topic_id,
 												command.post.post_number,
 												'Welcome to the game, @' + player, () => 0);
