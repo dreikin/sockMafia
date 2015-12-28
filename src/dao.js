@@ -52,6 +52,7 @@ function createModel(config) {
     // |- M:N
     player.belongsToMany(game, {through: roster});
     game.belongsToMany(player, {through: roster});
+	roster.belongsTo(game);
 
 
     // model handles
