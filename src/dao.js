@@ -102,7 +102,7 @@ module.exports = {
 	},
 	
 	isPlayerInGame: function(game, player) {
-		orm.query('SELECT gameID FROM `rosters` INNER JOIN players ON players.playerID = rosters.playerID WHERE players.name=' + player + ' and gameID=' + game, { type: orm.QueryTypes.SELECT})
+		db.query('SELECT gameID FROM `rosters` INNER JOIN players ON players.playerID = rosters.playerID WHERE players.name=' + player + ' and gameID=' + game, { type: db.QueryTypes.SELECT})
 		  .then(function(rows) {
 			return rows.length > 0;
 		  })
