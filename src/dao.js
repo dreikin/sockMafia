@@ -101,7 +101,7 @@ module.exports = {
 	},
 	
 	isPlayerInGame: function(game, player) {
-		return Models.games.findOne({where: {player: '' + player}}).then((playerInstance) => {
+		return Models.games.findOne({where: {player: '' + player}},{include: [{model: Models.roster, as: 'Roster'}]}).then((playerInstance) => {
 			return playerInstance !== null;
 		});
 	},
