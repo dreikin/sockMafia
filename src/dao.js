@@ -115,9 +115,7 @@ module.exports = {
 		let insPlayer;
 		return Models.players.findOrCreate({where: {name: '' + player}}).then((playerInstance) => {
 			insPlayer = playerInstance;
-			return Models.games.findById(game, {include: [{model: Models.roster, as: 'Roster'}]});
-		}).then( (gameInstance) => {
-			return gameInstance.addAssociation(insPlayer, {player_status: 'alive'});
+			return db.query('INSERT INTO rosters (playerId,gameId) VALUES ($playerId, $gameId)', { type: db.QueryTypes.INSERT, bind: { 'playerId': playrInstance.id, 'gameId': game}})
 		}).then(db.sync());		
 	},
 	
