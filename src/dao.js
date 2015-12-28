@@ -102,10 +102,10 @@ module.exports = {
 	},
 	
 	isPlayerInGame: function(game, player) {
-		db.query('SELECT gameId FROM `rosters` INNER JOIN players ON players.id = rosters.playerId WHERE players.name="' + player + '" and gameId=' + game, { type: db.QueryTypes.SELECT})
-		  .then(function(rows) {
+		db.query('SELECT gameId FROM `rosters` INNER JOIN players ON players.id = rosters.playerId WHERE players.name="' + player + '" and gameId=' + game, {type: db.QueryTypes.SELECT})
+		.then(function(rows) {
 			return rows.length > 0;
-		  })
+		});
 		/*return Models.roster.findOne({where: {playerId: player, gameID: game}}).then((playerInstance) => {
 			return playerInstance !== null;
 		});*/
@@ -115,7 +115,7 @@ module.exports = {
 		let insPlayer;
 		return Models.players.findOrCreate({where: {name: '' + player}}).then((playerInstance) => {
 			insPlayer = playerInstance[0];
-			return db.query('INSERT INTO rosters (playerId,gameId) VALUES ($playerId, $gameId)', { type: db.QueryTypes.INSERT, bind: { 'playerId': insPlayer.id, 'gameId': game}})
+			return db.query('INSERT INTO rosters (playerId,gameId) VALUES ($playerId, $gameId)', {type: db.QueryTypes.INSERT, bind: {'playerId': insPlayer.id, 'gameId': game}});
 		}).then(db.sync());		
 	},
 	
