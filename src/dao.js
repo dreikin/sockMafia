@@ -102,9 +102,13 @@ module.exports = {
 	},
 	
 	isPlayerInGame: function(game, player) {
-		return Models.roster.findOne({where: {playerId: player, gameID: game}}).then((playerInstance) => {
+		sequelize.query('SELECT gameID FROM `rosters` INNER JOIN players ON players.playerID = rosters.playerID WHERE players.name=' + player + ' and gameID=' + game, { type: sequelize.QueryTypes.SELECT})
+		  .then(function(rows) {
+			return rows.length > 0;
+		  })
+		/*return Models.roster.findOne({where: {playerId: player, gameID: game}}).then((playerInstance) => {
 			return playerInstance !== null;
-		});
+		});*/
 	},
 	
 	addPlayerToGame: function(game, player) {
