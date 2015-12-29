@@ -363,8 +363,8 @@ describe('mafia', () => {
 			};
 			
 			const players = [
-				{'name': 'yamikuronue', 'status': 'alive'},
-				{'name': 'accalia', 'status': 'dead'}
+				{player: {'name': 'yamikuronue'}, 'player_status': 'alive'},
+				{player: {'name': 'accalia'}, 'player_status': 'dead'}
 			];
 
 
