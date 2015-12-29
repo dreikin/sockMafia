@@ -108,8 +108,8 @@ describe('mafia', () => {
 			mafia.prepare(null, fakeConfig, events, undefined);
 			commandSpy.calledWith('for').should.be.true;
 		});
-
-		it('should echo your vote', () => {
+		
+		it('should reject votes from non-players', () => {
 			const browser = {
 				createPost: sinon.spy()
 			};
@@ -124,13 +124,130 @@ describe('mafia', () => {
 			};
 
 			mafia.internals.browser = browser;
+			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(false);
+			sandbox.stub(mafiaDAO, 'isPlayerAlive').resolves(true);
+			sandbox.stub(mafiaDAO, 'addVote').resolves(true);
 
-			mafia.voteHandler(command);
-			browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+			mafia.voteHandler(command).then(() => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
 
-			const output = browser.createPost.getCall(0).args[2];
-			output.should.include('@tehNinja voted for @noLunch in post ' +
-				'#<a href="https://what.thedailywtf.com/t/12345/98765">98765</a>.');
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('You are not yet a player.');
+			});
+		});
+		
+		it('should reject votes for non-players', () => {
+			const browser = {
+				createPost: sinon.spy()
+			};
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				},
+				args: ['@noLunch'],
+				input: '!for @noLunch'
+			};
+
+			mafia.internals.browser = browser;
+			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').onFirstCall().resolves(true).onSecondCall().resolves(false);
+			sandbox.stub(mafiaDAO, 'isPlayerAlive').resolves(true);
+			sandbox.stub(mafiaDAO, 'addVote').resolves(true);
+
+			mafia.voteHandler(command).then(() => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('your princess is in another castle.');
+			});
+		});
+		
+		it('should reject votes from the dead', () => {
+			const browser = {
+				createPost: sinon.spy()
+			};
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				},
+				args: ['@noLunch'],
+				input: '!for @noLunch'
+			};
+
+			mafia.internals.browser = browser;
+			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
+			sandbox.stub(mafiaDAO, 'isPlayerAlive').onFirstCall().resolves(true).onSecondCall().resolves(false);
+			sandbox.stub(mafiaDAO, 'addVote').resolves(true);
+
+			mafia.voteHandler(command).then(() => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('You would be wise to not speak ill of the dead.');
+			});
+		});
+
+		it('should reject votes for the dead', () => {
+			const browser = {
+				createPost: sinon.spy()
+			};
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				},
+				args: ['@noLunch'],
+				input: '!for @noLunch'
+			};
+
+			mafia.internals.browser = browser;
+			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
+			sandbox.stub(mafiaDAO, 'isPlayerAlive').resolves(false);
+			sandbox.stub(mafiaDAO, 'addVote').resolves(true);
+
+			mafia.voteHandler(command).then(() => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('Aaagh! Ghosts!');
+			});
+		});
+
+		it('should echo your vote when successful', () => {
+			const browser = {
+				createPost: sinon.spy()
+			};
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				},
+				args: ['@noLunch'],
+				input: '!for @noLunch'
+			};
+
+			mafia.internals.browser = browser;
+			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
+			sandbox.stub(mafiaDAO, 'isPlayerAlive').resolves(true);
+			sandbox.stub(mafiaDAO, 'addVote').resolves(true);
+
+			mafia.voteHandler(command).then(() => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('@tehNinja voted for @noLunch in post ' +
+					'#<a href="https://what.thedailywtf.com/t/12345/98765">98765</a>.');
+			});
 		});
 	});
 
