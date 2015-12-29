@@ -115,7 +115,7 @@ module.exports = {
 	},
 
 	isPlayerAlive: function(game, player) {
-		db.query('SELECT gameId FROM `rosters` INNER JOIN players ON players.id = rosters.playerId WHERE players.name="' + player + '" and gameId=' + game + ' and player_status="alive"', {type: db.QueryTypes.SELECT})
+		return db.query('SELECT gameId FROM `rosters` INNER JOIN players ON players.id = rosters.playerId WHERE players.name="' + player + '" and gameId=' + game + ' and player_status="alive"', {type: db.QueryTypes.SELECT})
 			.then(function(rows) {
 				return rows.length > 0;
 			});
