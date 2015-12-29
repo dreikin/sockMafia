@@ -104,7 +104,10 @@ module.exports = {
 	isPlayerInGame: function(game, player) {
 		return Models.players.findOne({where: {name: player}})
 			.then((player) => {
-				return Models.roster.findOne({where: {playerId: player.id, gameId: game}});
+				if (player) {
+					return Models.roster.findOne({where: {playerId: player.id, gameId: game}});
+				}
+				return null;
 			})
 			.then(function(instance) {
 				return instance !== null;
