@@ -9,7 +9,6 @@ after_script:
 - test -e ./coverage/lcov.info && < ./coverage/lcov.info ./node_modules/coveralls/bin/coveralls.js
 env:
   global:
-    service_name: travis-ci
-	
+    service_name: travis-ci	
 notifications:
   slack: sockdrawer:6bn0VFi2HhWot4A7bwO5FVW5
