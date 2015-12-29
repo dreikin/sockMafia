@@ -21,8 +21,8 @@ const fakeConfig = {
 describe('The Database', () => {
 
 	let sandbox, notificationSpy, commandSpy;
-	before(() => {
-		return mafiaDAO.createDB(fakeConfig);
+	before((done) => {
+		return mafiaDAO.createDB(fakeConfig).then(() => {done()});
 	});
 	beforeEach(() => {
 		sandbox = sinon.sandbox.create();
@@ -42,7 +42,9 @@ describe('The Database', () => {
 			db.all('SELECT name FROM sqlite_master WHERE type="table" AND name="players";', (err, rows) => {
 				expect(err).to.be.null;
 				expect(rows.length).to.equal(1);
-				done();
+				db.close(() => {
+					done();
+				});
 			});
 		});
 		
@@ -50,7 +52,9 @@ describe('The Database', () => {
 			let db = new sqlite3.Database(fakeConfig.db);
 			db.all('SELECT name FROM players', (err, rows) => {
 				expect(err).to.be.null;
-				done();
+				db.close(() => {
+					done();
+				});
 			});		
 		});
 	});
@@ -61,7 +65,9 @@ describe('The Database', () => {
 			db.all('SELECT name FROM sqlite_master WHERE type="table" AND name="games";', (err, rows) => {
 				expect(err).to.be.null;
 				expect(rows.length).to.equal(1);
-				done();
+				db.close(() => {
+					done();
+				});
 			});
 		});
 	});
@@ -69,10 +75,12 @@ describe('The Database', () => {
 	describe('Roster table', () => {
 		it('should be a table', (done) => {
 			let db = new sqlite3.Database(fakeConfig.db);
-			db.all('SELECT name FROM sqlite_master WHERE type="table" AND name="roster";', (err, rows) => {
+			db.all('SELECT name FROM sqlite_master WHERE type="table" AND name="rosters";', (err, rows) => {
 				expect(err).to.be.null;
 				expect(rows.length).to.equal(1);
-				done();
+				db.close(() => {
+					done();
+				});
 			});
 		});
 	});
@@ -83,7 +91,9 @@ describe('The Database', () => {
 			db.all('SELECT name FROM sqlite_master WHERE type="table" AND name="votes";', (err, rows) => {
 				expect(err).to.be.null;
 				expect(rows.length).to.equal(1);
-				done();
+				db.close(() => {
+					done();
+				});
 			});
 		});
 	});
@@ -91,8 +101,8 @@ describe('The Database', () => {
 describe('The DAO', () => {
 
 	let sandbox, notificationSpy, commandSpy;
-	before(() => {
-		return mafiaDAO.createDB(fakeConfig);
+	before((done) => {
+		return mafiaDAO.createDB(fakeConfig).then(() => {done()});
 	});
 	beforeEach(() => {
 		sandbox = sinon.sandbox.create();
@@ -108,6 +118,7 @@ describe('The DAO', () => {
 				db.all('SELECT id FROM games WHERE id=1234;', (err, rows) => {
 					expect(err).to.be.null;
 					expect(rows.length).to.equal(1);
+					db.close();
 				});
 			})
 		});
@@ -118,6 +129,7 @@ describe('The DAO', () => {
 				db.all('SELECT id FROM games WHERE id=1234;', (err, rows) => {
 					expect(err).to.be.null;
 					expect(rows.length).to.equal(1);
+					db.close();
 				});
 			})
 		});
