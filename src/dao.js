@@ -160,13 +160,21 @@ module.exports = {
 			})
 			.then((result) => {
 				targetInstance = result;
+				//Get game day (simplified)
+				return Models.games.findOne({
+					where: {
+						id: game
+					}
+				});
+			})
+			.then((result) => {
 				//Add vote
 				const vote = Models.votes.build({
 					post: post,
-					day: day,
-					current: true,
-					voter: voterInstance,
-					target: targetInstance
+					day: result.currentDay,
+					voter: voterInstance.id,
+					target: targetInstance.id,
+					gameId: game
 				});
 				return vote.save({transaction: t});
 			});
