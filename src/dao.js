@@ -103,9 +103,9 @@ module.exports = {
 
 	isPlayerInGame: function(game, player) {
 		return Models.players.findOne({where: {name: player}})
-			.then((player) => {
-				if (player) {
-					return Models.roster.findOne({where: {playerId: player.id, gameId: game}});
+			.then((playerInstance) => {
+				if (playerInstance) {
+					return Models.roster.findOne({where: {playerId: playerInstance.id, gameId: game}});
 				}
 				return null;
 			})
@@ -183,57 +183,5 @@ module.exports = {
 
 	getPlayers: function(game) {
 		return Models.roster.findAll({where: {gameId: game}, include: [Models.players]});
-	},
-
-	voteForPlayer: function(voter, target, game, post, day) {
-		let voterInstance, targetInstance;
-		return db.transaction(function (t) {
-			return module.exports.hasPlayerVotedToday(game, voter).then((result) => {
-				/*Logic to invalidate the old vote*/
-				if (result) {
-					return Models.votes.findOne({
-						include: [{
-							model: Models.players,
-							as: 'Players',
-							where: {name: voter}
-						}],
-						where: {
-							current: true
-						}
-					}, {transaction: t}).then((record) => {
-						record.current = false;
-						return record.save({transaction: t});
-					});
-				} else {
-					return Promise.resolve();
-				}
-			}).then(() => {
-				//Get player id
-				return Models.players.findOne({
-					where: {
-						name: voter
-					}
-				});
-			}).then((result) => {
-				voterInstance = result;
-				//Get target ID
-				return Models.players.findOne({
-					where: {
-						name: target
-					}
-				});
-			}).then((result) => {
-				targetInstance = result;
-				//Add vote
-				const vote = Models.votes.build({
-					post: post,
-					day: day,
-					current: true,
-					voter: voterInstance,
-					target: targetInstance
-				});
-				return vote.save({transaction: t});
-			});
-		});
 	}
 };

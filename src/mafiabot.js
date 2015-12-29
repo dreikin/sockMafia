@@ -64,12 +64,12 @@ exports.mentionHandler = function mentionHandler(_, topic, post) {
 
 exports.echoHandler = function echoHandler(command) {
 	const text = 'topic: ' + command.post.topic_id + '\n'
-			   + 'post: ' + command.post.post_number + '\n'
-			   + 'input: `' + command.input + '`\n'
-			   + 'command: `' + command.command + '`\n'
-			   + 'args: `' + command.args + '`\n'
-			   + 'mention: `' + command.mention + '`\n'
-			   + 'post:\n[quote]\n' + command.post.cleaned + '\n[/quote]';
+				+ 'post: ' + command.post.post_number + '\n'
+				+ 'input: `' + command.input + '`\n'
+				+ 'command: `' + command.command + '`\n'
+				+ 'args: `' + command.args + '`\n'
+				+ 'mention: `' + command.mention + '`\n'
+				+ 'post:\n[quote]\n' + command.post.cleaned + '\n[/quote]';
 	internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
 };
 
@@ -82,24 +82,34 @@ exports.voteHandler = function voteHandler(command) {
 	return dao.ensureGameExists(game)
 		.then(() => dao.isPlayerInGame(game, voter))
 		.then((inGame) => {
-			if (!inGame) {return Promise.reject("Voter not in game");}
+			if (!inGame) {
+				return Promise.reject('Voter not in game');
+			}
 			return dao.isPlayerAlive(game, voter);
 		})
 		.then((isAlive) => {
-			if (!isAlive) {return Promise.reject("Voter not alive");}
+			if (!isAlive) {
+				return Promise.reject('Voter not alive');
+			}
 			return dao.isPlayerInGame(game, target);
 		})
 		.then((inGame) => {
-			if (!inGame) {return Promise.reject("Target not in game");}
+			if (!inGame) {
+				return Promise.reject('Target not in game');
+			}
 			return dao.isPlayerAlive(game, target);
 		})
 		.then((isAlive) => {
-			if (!isAlive) {return Promise.reject("Target not alive");}
+			if (!isAlive) {
+				return Promise.reject('Target not alive');
+			}
 			return dao.addVote(game, post, voter, target);
 		})
 		.then((result) => {
-			if (!result) {return Promise.reject("Vote failed");}
-			let text = '@' + command.post.username + ' voted for @' + target
+			if (!result) {
+				return Promise.reject('Vote failed');
+			}
+			const text = '@' + command.post.username + ' voted for @' + target
 				+ ' in post #<a href="https://what.thedailywtf.com/t/'
 				+ command.post.topic_id + '/' + command.post.post_number + '">'
 				+ command.post.post_number + '</a>.\n\n'
@@ -110,22 +120,18 @@ exports.voteHandler = function voteHandler(command) {
 		.catch((reason) => {
 			let text;
 
-			if (reason == "Voter not in game") {
+			if (reason === 'Voter not in game') {
 				text = '@' + voter + ': You are not yet a player.\n'
 					+ 'Please use `@' + internals.configuration.username + ' join` to join the game.';
-			}
-			else if (reason == "Voter not alive") {
+			} else if (reason === 'Voter not alive') {
 				text = 'Aaagh! Ghosts!\n'
-					+ '(@' + voter + ': You are no longer among the living.)'
-			}
-			else if (reason == "Target not in game") {
+					+ '(@' + voter + ': You are no longer among the living.)';
+			} else if (reason === 'Target not in game') {
 				text = 'Who? I\'m sorry, @' + voter + ' but your princess is in another castle.\n'
 					+ '(' + target + ' is not in this game.)';
-			}
-			else if (reason == "Target not alive") {
-				text = '@' + voter + ": You would be wise to not speak ill of the dead.";
-			}
-			else if (reason == "Vote failed") {
+			} else if (reason === 'Target not alive') {
+				text = '@' + voter + ': You would be wise to not speak ill of the dead.';
+			} else if (reason === 'Vote failed') {
 				text = ':wtf:\nSorry, @' + voter + ': your vote failed.  No, I don\'t know why.'
 					+ ' You\'ll have to ask @' + internals.configuration.owner + ' about that.';
 			}
@@ -136,7 +142,7 @@ exports.voteHandler = function voteHandler(command) {
 				+ command.post.topic_id + '/' + command.post.post_number + '">'
 				+ command.post.post_number + '</a>.\n\n'
 				+ 'Vote text:\n[quote="'
-				+ command.post.username + ', post:' + command.post.post_number + ', topic:' + command.post.topic_id +'"]\n'
+				+ command.post.username + ', post:' + command.post.post_number + ', topic:' + command.post.topic_id + '"]\n'
 				+ command.input + '\n[/quote]';
 			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
 			return Promise.resolve();
@@ -149,8 +155,8 @@ exports.joinHandler = function joinHandler(command) {
 	
 	const reportError = (error) => {
 		internals.browser.createPost(command.post.topic_id,
-									 command.post.post_number,
-									 'Error when adding to game: ' + error, () => 0);
+									command.post.post_number,
+									'Error when adding to game: ' + error, () => 0);
 	};
 	
 	return dao.ensureGameExists(id)
@@ -162,8 +168,8 @@ exports.joinHandler = function joinHandler(command) {
 		} else {
 			return dao.addPlayerToGame(id, player.toLowerCase()).then(() => {
 				internals.browser.createPost(command.post.topic_id,
-											 command.post.post_number,
-											 'Welcome to the game, @' + player, () => 0);
+											command.post.post_number,
+											'Welcome to the game, @' + player, () => 0);
 			});
 		}
 	})
@@ -218,8 +224,8 @@ exports.listAllPlayersHandler = function listAllPlayersHandler(command) {
 	const id = command.post.topic_id;
 	const reportError = (error) => {
 		internals.browser.createPost(command.post.topic_id,
-									 command.post.post_number,
-									 'Error resolving list: ' + error, () => 0);
+									command.post.post_number,
+									'Error resolving list: ' + error, () => 0);
 	};
 	return dao.ensureGameExists(id)
 	.then(() => dao.getPlayers(id))
