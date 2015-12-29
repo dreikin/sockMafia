@@ -9,7 +9,8 @@ module.exports = (db) => {
         id: {
            type: orm.INTEGER,
            allowNull: false,
-           primaryKey: true
+           primaryKey: true,
+           autoIncrement: true
         },
         player_status: {
             type: orm.TEXT,
