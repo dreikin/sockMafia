@@ -96,6 +96,7 @@ module.exports = {
 		}
 	},
 
+	// This needs to be split into "createGame" (mod only) and "findGame"
 	ensureGameExists: function(id) {
 		return Models.games.findOrCreate({where: {id: '' + id}, defaults: {status: 'prep', currentDay: 0, stage: 'night'}});
 	},
@@ -108,6 +109,13 @@ module.exports = {
 		/*return Models.roster.findOne({where: {playerId: player, gameID: game}}).then((playerInstance) => {
 			return playerInstance !== null;
 		});*/
+	},
+
+	isPlayerAlive: function(game, player) {
+		db.query('SELECT gameId FROM `rosters` INNER JOIN players ON players.id = rosters.playerId WHERE players.name="' + player + '" and gameId=' + game + ' and player_status="alive"', {type: db.QueryTypes.SELECT})
+			.then(function(rows) {
+				return rows.length > 0;
+			});
 	},
 
 	hasPlayerVotedToday: function(game, player) {
@@ -126,6 +134,40 @@ module.exports = {
 			insPlayer = playerInstance[0];
 			return Models.roster.findOrCreate({where: {playerId: insPlayer.id, gameId: game, player_status: 'alive'}});
 		}).then(db.sync());		
+	},
+
+	addVote: function(game, post, voter, target) {
+		let voterInstance, targetInstance;
+
+		return db.transaction(function (t) {
+			//Get player id
+			return Models.players.findOne({
+				where: {
+					name: voter
+				}
+			})
+			.then((result) => {
+				voterInstance = result;
+				//Get target ID
+				return Models.players.findOne({
+					where: {
+						name: target
+					}
+				});
+			})
+			.then((result) => {
+				targetInstance = result;
+				//Add vote
+				const vote = Models.votes.build({
+					post: post,
+					day: day,
+					current: true,
+					voter: voterInstance,
+					target: targetInstance
+				});
+				return vote.save({transaction: t});
+			});
+		});
 	},
 
 	getPlayers: function(game) {
