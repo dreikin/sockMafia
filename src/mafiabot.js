@@ -123,7 +123,43 @@ exports.killHandler = function killHandler(command) {};
 exports.dayHandler = function dayHandler(command) {};
 exports.listVotesHandler = function listVotesHandler(command) {};
 exports.listAllVotesHandler = function listAllVotesHandler(command) {};
-exports.listPlayersHandler = function listPlayersHandler(command) {};
+
+exports.listPlayersHandler = function listPlayersHandler(command) {
+	const id = command.post.topic_id;
+	const reportError = (error) => {
+		internals.browser.createPost(command.post.topic_id,
+			command.post.post_number,
+			'Error resolving list: ' + error, () => 0);
+	};
+	return dao.ensureGameExists(id)
+		.then(() => dao.getPlayers(id))
+		.then( (rows) => {
+			const alive = [];
+
+			rows.forEach((row) => {
+				if (row.player_status === 'alive') {
+					alive.push(row.player.name);
+				}
+			});
+
+			const numLiving = alive.length;
+
+			let output = '##Player List\n';
+			output += '###Living:\n';
+			if (numLiving <= 0) {
+				output += 'Nobody! Aren\'t you special?\n';
+			} else {
+				for (let i = 0; i < numLiving; i++) {
+					output += '- ' + alive[i] + '\n';
+				}
+			}
+
+			internals.browser.createPost(command.post.topic_id, command.post.post_number, output, () => 0);
+			return Promise.resolve();
+		}).catch((err) => {
+			reportError(err);
+		});
+};
 
 exports.listAllPlayersHandler = function listAllPlayersHandler(command) {
 	const id = command.post.topic_id;
