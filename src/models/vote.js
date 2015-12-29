@@ -5,27 +5,21 @@
 const orm = require('sequelize');
 
 module.exports = (db) => {
-    return db.define('vote', {
-        // Primary key
-        id: {
-            type: orm.INTEGER,
-            primaryKey: true,
-            autoIncrement: true
-        },
-        // Post number of the vote
-        post: {
-            type: orm.INTEGER,
-            allowNull: false
-        },
-		day: {
+	return db.define('vote', {
+		// Primary key
+		id: {
+			type: orm.INTEGER,
+			primaryKey: true,
+			autoIncrement: true
+		},
+		// Post number of the vote
+		post: {
 			type: orm.INTEGER,
 			allowNull: false
 		},
-		//Is the current vote?
-		current: {
-			type: orm.BOOLEAN,
-			allowNull: false,
-			defaultValue: true
+		day: {
+			type: orm.INTEGER,
+			allowNull: false
 		}
-    });
+	});
 };
