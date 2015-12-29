@@ -99,7 +99,7 @@ exports.voteHandler = function voteHandler(command) {
 		})
 		.then((result) => {
 			if (!result) {return Promise.reject("Vote failed");}
-			let text = '@' + command.post.username + ' voted for @' + command.args[0]
+			let text = '@' + command.post.username + ' voted for @' + target
 				+ ' in post #<a href="https://what.thedailywtf.com/t/'
 				+ command.post.topic_id + '/' + command.post.post_number + '">'
 				+ command.post.post_number + '</a>.\n\n'
@@ -131,7 +131,7 @@ exports.voteHandler = function voteHandler(command) {
 			}
 
 			text += '\n<hr />\n';
-			text += '@' + command.post.username + ' tried to vote for ' + command.args[0]
+			text += '@' + command.post.username + ' tried to vote for ' + target
 				+ ' in post #<a href="https://what.thedailywtf.com/t/'
 				+ command.post.topic_id + '/' + command.post.post_number + '">'
 				+ command.post.post_number + '</a>.\n\n'
