@@ -102,13 +102,13 @@ module.exports = {
 	},
 
 	isPlayerInGame: function(game, player) {
-		db.query('SELECT gameId FROM `rosters` INNER JOIN players ON players.id = rosters.playerId WHERE players.name="' + player + '" and gameId=' + game, {type: db.QueryTypes.SELECT})
-		.then(function(rows) {
-			return rows.length > 0;
-		});
-		/*return Models.roster.findOne({where: {playerId: player, gameID: game}}).then((playerInstance) => {
-			return playerInstance !== null;
-		});*/
+		return Models.players.findOne({where: {name: player}})
+			.then((player) => {
+				return Models.roster.findOne({where: {playerId: player.id, gameId: game}});
+			})
+			.then(function(instance) {
+				return instance !== null;
+			});
 	},
 
 	isPlayerAlive: function(game, player) {

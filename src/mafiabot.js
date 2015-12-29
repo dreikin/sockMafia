@@ -80,67 +80,67 @@ exports.voteHandler = function voteHandler(command) {
 	const target = command.args[0].toLowerCase();
 
 	return dao.ensureGameExists(game)
-	.then(() => dao.isPlayerInGame(game, voter))
-	.then((inGame) => {
-		if (!inGame) {return Promise.reject("Voter not in game");}
-		return dao.isPlayerAlive(game, voter);
-	})
-	.then((isAlive) => {
-		if (!isAlive) {return Promise.reject("Voter not alive");}
-		return dao.isPlayerInGame(game, target);
-	})
-	.then((inGame) => {
-		if (!inGame) {return Promise.reject("Target not in game");}
-		return dao.isPlayerAlive(game, target);
-	})
-	.then((isAlive) => {
-		if (!isAlive) {return Promise.reject("Target not alive");}
-		return dao.addVote(game, post, voter, target);
-	})
-	.then((result) => {
-		if (!result) {return Promise.reject("Vote failed");}
-		text = '@' + command.post.username + ' voted for ' + command.args[0]
-			+ ' in post #<a href="https://what.thedailywtf.com/t/'
-			+ command.post.topic_id + '/' + command.post.post_number + '">'
-			+ command.post.post_number + '</a>.\n\n'
-			+ 'Vote text:\n[quote]\n' + command.input + '\n[/quote]';
-		internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
-		return Promise.resolve();
-	})
-	.catch((reason) => {
-		let text;
+		.then(() => dao.isPlayerInGame(game, voter))
+		.then((inGame) => {
+			if (!inGame) {return Promise.reject("Voter not in game");}
+			return dao.isPlayerAlive(game, voter);
+		})
+		.then((isAlive) => {
+			if (!isAlive) {return Promise.reject("Voter not alive");}
+			return dao.isPlayerInGame(game, target);
+		})
+		.then((inGame) => {
+			if (!inGame) {return Promise.reject("Target not in game");}
+			return dao.isPlayerAlive(game, target);
+		})
+		.then((isAlive) => {
+			if (!isAlive) {return Promise.reject("Target not alive");}
+			return dao.addVote(game, post, voter, target);
+		})
+		.then((result) => {
+			if (!result) {return Promise.reject("Vote failed");}
+			text = '@' + command.post.username + ' voted for ' + command.args[0]
+				+ ' in post #<a href="https://what.thedailywtf.com/t/'
+				+ command.post.topic_id + '/' + command.post.post_number + '">'
+				+ command.post.post_number + '</a>.\n\n'
+				+ 'Vote text:\n[quote]\n' + command.input + '\n[/quote]';
+			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+			return Promise.resolve();
+		})
+		.catch((reason) => {
+			let text;
 
-		if (reason == "Voter not in game") {
-			text = '@' + voter + ': You are not yet a player.\n'
-				+ 'Please use `@' + internals.configuration.username + ' join` to join the game.';
-		}
-		else if (reason == "Voter not alive") {
-			text = 'Aaagh! Ghosts!\n'
-				+ '(@' + voter + ': You are no longer among the living.)'
-		}
-		else if (reason == "Target not in game") {
-			text = 'Who? I\'m sorry, @' + voter + ' but your princess is in another castle.\n'
-				+ '(' + target + ' is not in this game.)';
-		}
-		else if (reason == "Target not alive") {
-			text = '@' + voter + ": You would be wise to not speak ill of the dead.";
-		}
-		else if (reason == "Vote failed") {
-			text = ':wtf:\nSorry, @' + voter + ': your vote failed.  No, I don\'t know why.'
-				+ ' You\'ll have to ask @' + internals.configuration.owner + ' about that.';
-		}
+			if (reason == "Voter not in game") {
+				text = '@' + voter + ': You are not yet a player.\n'
+					+ 'Please use `@' + internals.configuration.username + ' join` to join the game.';
+			}
+			else if (reason == "Voter not alive") {
+				text = 'Aaagh! Ghosts!\n'
+					+ '(@' + voter + ': You are no longer among the living.)'
+			}
+			else if (reason == "Target not in game") {
+				text = 'Who? I\'m sorry, @' + voter + ' but your princess is in another castle.\n'
+					+ '(' + target + ' is not in this game.)';
+			}
+			else if (reason == "Target not alive") {
+				text = '@' + voter + ": You would be wise to not speak ill of the dead.";
+			}
+			else if (reason == "Vote failed") {
+				text = ':wtf:\nSorry, @' + voter + ': your vote failed.  No, I don\'t know why.'
+					+ ' You\'ll have to ask @' + internals.configuration.owner + ' about that.';
+			}
 
-		text += '\n<hr />\n';
-		text += '@' + command.post.username + ' tried to vote for ' + command.args[0]
-			+ ' in post #<a href="https://what.thedailywtf.com/t/'
-			+ command.post.topic_id + '/' + command.post.post_number + '">'
-			+ command.post.post_number + '</a>.\n\n'
-			+ 'Vote text:\n[quote="'
-			+ command.post.username + ', post:' + command.post.post_number + ', topic:' + command.post.topic_id +'"]\n'
-			+ command.input + '\n[/quote]';
-		internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
-		return Promise.resolve();
-	});
+			text += '\n<hr />\n';
+			text += '@' + command.post.username + ' tried to vote for ' + command.args[0]
+				+ ' in post #<a href="https://what.thedailywtf.com/t/'
+				+ command.post.topic_id + '/' + command.post.post_number + '">'
+				+ command.post.post_number + '</a>.\n\n'
+				+ 'Vote text:\n[quote="'
+				+ command.post.username + ', post:' + command.post.post_number + ', topic:' + command.post.topic_id +'"]\n'
+				+ command.input + '\n[/quote]';
+			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+			return Promise.resolve();
+		});
 };
 
 exports.joinHandler = function joinHandler(command) {
