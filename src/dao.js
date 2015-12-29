@@ -53,6 +53,7 @@ function createModel(config) {
     player.belongsToMany(game, {through: roster});
     game.belongsToMany(player, {through: roster});
 	roster.belongsTo(game);
+	roster.belongsTo(player);
 
 
     // model handles
@@ -130,9 +131,7 @@ module.exports = {
 	},
 	
 	getPlayers: function(game) {
-		return Models.games.findById(game, {include: {model: Models.players, as: 'Roster'}}).then((gameInstance) => {
-			return gameInstance.Roster;
-		});
+		return Models.roster.findAll({where: {gameId: game}, include: [Models.players]});
 	},
 	
 	voteForPlayer: function(voter, target, game, post, day) {

@@ -139,10 +139,10 @@ exports.listAllPlayersHandler = function listAllPlayersHandler(command) {
 		const dead = [];
 		
 		rows.forEach((row) => {
-			if (row.status === 'alive') {
-				alive.push(row.name);
-			} else if (row.status === 'dead') {
-				dead.push(row.name);
+			if (row.player_status === 'alive') {
+				alive.push(row.player.name);
+			} else if (row.player_status === 'dead') {
+				dead.push(row.player.name);
 			}
 		});
 		
