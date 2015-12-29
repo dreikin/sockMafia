@@ -77,7 +77,7 @@ exports.voteHandler = function voteHandler(command) {
 	const game = command.post.topic_id;
 	const post = command.post.post_number;
 	const voter = command.post.username.toLowerCase();
-	const target = command.args[0].toLowerCase();
+	const target = command.args[0].toLowerCase().replace(/^@?(.*)/, '$1');
 
 	return dao.ensureGameExists(game)
 		.then(() => dao.isPlayerInGame(game, voter))
@@ -99,7 +99,7 @@ exports.voteHandler = function voteHandler(command) {
 		})
 		.then((result) => {
 			if (!result) {return Promise.reject("Vote failed");}
-			let text = '@' + command.post.username + ' voted for ' + command.args[0]
+			let text = '@' + command.post.username + ' voted for @' + command.args[0]
 				+ ' in post #<a href="https://what.thedailywtf.com/t/'
 				+ command.post.topic_id + '/' + command.post.post_number + '">'
 				+ command.post.post_number + '</a>.\n\n'
@@ -274,6 +274,7 @@ function registerCommands(events) {
 	events.onCommand('list-players', 'list all players still alive', exports.listPlayersHandler, () => 0);
 	events.onCommand('list-votes', 'list all votes from the day\'s start', exports.listVotesHandler, () => 0);
 	events.onCommand('new-day', 'move on to a new day (mod only)', exports.dayHandler, () => 0);
+	events.onCommand('vote', 'vote for a player to be executed (alt. form)', exports.voteHandler, () => 0);
 }
 
 /**
