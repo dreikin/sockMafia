@@ -137,15 +137,15 @@ module.exports = {
 	
 	voteForPlayer: function(voter, target, game, post, day) {
 		let voterInstance, targetInstance;
-		return sequelize.transaction(function (t) {
-			return hasPlayerVotedToday(game, voter).then((result) => {
+		return db.transaction(function (t) {
+			return module.exports.hasPlayerVotedToday(game, voter).then((result) => {
 				/*Logic to invalidate the old vote*/
 				if (result) {
 					return Models.votes.findOne({
 						include: [{
-							model: models.players,
+							model: Models.players,
 							as: 'Players',
-							where: { name: voter }
+							where: {name: voter}
 						}],
 						where: {
 							current: true
@@ -175,7 +175,7 @@ module.exports = {
 			}).then((result) => {
 				targetInstance = result;
 				//Add vote
-				let vote = Models.votes.build({
+				const vote = Models.votes.build({
 					post: post,
 					day: day,
 					current: true,
@@ -183,7 +183,7 @@ module.exports = {
 					target: targetInstance
 				});
 				return vote.save({transaction: t});
-			})
+			});
 		});
 	}
 };

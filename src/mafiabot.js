@@ -86,8 +86,6 @@ exports.voteHandler = function voteHandler(command) {
              + command.post.topic_id + '/' + command.post.post_number + '">'
              + command.post.post_number + '</a>.\n\n'
              + 'Vote text:\n[quote]\n' + command.input + '\n[/quote]';
-			 
-		
     }
     internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
 };

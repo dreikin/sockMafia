@@ -1,5 +1,5 @@
 'use strict';
-/*globals describe, it*/
+/*globals describe, it, before, beforeEach, afterEach*/
 
 const chai = require('chai'),
 	sinon = require('sinon');
@@ -22,7 +22,9 @@ describe('The Database', () => {
 
 	let sandbox, notificationSpy, commandSpy;
 	before((done) => {
-		return mafiaDAO.createDB(fakeConfig).then(() => {done()});
+		return mafiaDAO.createDB(fakeConfig).then(() => {
+			done();
+		});
 	});
 	beforeEach(() => {
 		sandbox = sinon.sandbox.create();
@@ -32,13 +34,13 @@ describe('The Database', () => {
 	});
 	
 	it('should exist', () => {
-		let db = new sqlite3.Database(fakeConfig.db);
+		const db = new sqlite3.Database(fakeConfig.db);
 		expect(db).to.be.a('object');
 	});
 
 	describe('Players table', () => {
 		it('should be a table', (done) => {
-			let db = new sqlite3.Database(fakeConfig.db);
+			const db = new sqlite3.Database(fakeConfig.db);
 			db.all('SELECT name FROM sqlite_master WHERE type="table" AND name="players";', (err, rows) => {
 				expect(err).to.be.null;
 				expect(rows.length).to.equal(1);
@@ -49,7 +51,7 @@ describe('The Database', () => {
 		});
 		
 		it('Should have a name column', (done) => {
-			let db = new sqlite3.Database(fakeConfig.db);
+			const db = new sqlite3.Database(fakeConfig.db);
 			db.all('SELECT name FROM players', (err, rows) => {
 				expect(err).to.be.null;
 				db.close(() => {
@@ -61,7 +63,7 @@ describe('The Database', () => {
 	
 	describe('Games table', () => {
 		it('should be a table', (done) => {
-			let db = new sqlite3.Database(fakeConfig.db);
+			const db = new sqlite3.Database(fakeConfig.db);
 			db.all('SELECT name FROM sqlite_master WHERE type="table" AND name="games";', (err, rows) => {
 				expect(err).to.be.null;
 				expect(rows.length).to.equal(1);
@@ -74,7 +76,7 @@ describe('The Database', () => {
 	
 	describe('Roster table', () => {
 		it('should be a table', (done) => {
-			let db = new sqlite3.Database(fakeConfig.db);
+			const db = new sqlite3.Database(fakeConfig.db);
 			db.all('SELECT name FROM sqlite_master WHERE type="table" AND name="rosters";', (err, rows) => {
 				expect(err).to.be.null;
 				expect(rows.length).to.equal(1);
@@ -87,7 +89,7 @@ describe('The Database', () => {
 	
 	describe('Votes table', () => {
 		it('should be a table', (done) => {
-			let db = new sqlite3.Database(fakeConfig.db);
+			const db = new sqlite3.Database(fakeConfig.db);
 			db.all('SELECT name FROM sqlite_master WHERE type="table" AND name="votes";', (err, rows) => {
 				expect(err).to.be.null;
 				expect(rows.length).to.equal(1);
@@ -102,7 +104,9 @@ describe('The DAO', () => {
 
 	let sandbox, notificationSpy, commandSpy;
 	before((done) => {
-		return mafiaDAO.createDB(fakeConfig).then(() => {done()});
+		return mafiaDAO.createDB(fakeConfig).then(() => {
+			done();
+		});
 	});
 	beforeEach(() => {
 		sandbox = sinon.sandbox.create();
@@ -114,24 +118,24 @@ describe('The DAO', () => {
 	describe('ensureGameExists', () => {
 		it('should insert when no game exists', () => {
 			return mafiaDAO.ensureGameExists(1234).then(() => {
-				let db = new sqlite3.Database(fakeConfig.db);
+				const db = new sqlite3.Database(fakeConfig.db);
 				db.all('SELECT id FROM games WHERE id=1234;', (err, rows) => {
 					expect(err).to.be.null;
 					expect(rows.length).to.equal(1);
 					db.close();
 				});
-			})
+			});
 		});
 		
 		it('should not reinsert when the game already exists', () => {
 			return mafiaDAO.ensureGameExists(1234).then(() => {
-				let db = new sqlite3.Database(fakeConfig.db);
+				const db = new sqlite3.Database(fakeConfig.db);
 				db.all('SELECT id FROM games WHERE id=1234;', (err, rows) => {
 					expect(err).to.be.null;
 					expect(rows.length).to.equal(1);
 					db.close();
 				});
-			})
+			});
 		});
 	});
 });
