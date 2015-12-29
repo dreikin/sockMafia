@@ -45,8 +45,8 @@ function createModel(config) {
     // |- 1:1
     //segment.hasOne(game);
     // |- 1:N
-    player.hasMany(vote, {as: 'voter'});
-    player.hasMany(vote, {as: 'target'});
+	player.hasMany(vote, {as: 'voter', foreignKey: 'voter'});
+    player.hasMany(vote, {as: 'target', foreignKey: 'target'});
     game.hasMany(vote);
    // game.hasMany(segment);
     // |- M:N
@@ -82,7 +82,7 @@ function initialise(config) {
 	}).then( () => {
 		console.log('Mafia: Sync complete. Your database is ready to go.');
 	}).catch((err) => {
-		console.err('Mafia: ' + err);
+		console.log('Mafia: ' + err);
 		throw err;
 	});
 };
@@ -111,6 +111,16 @@ module.exports = {
 		});*/
 	},
 	
+	hasPlayerVotedToday: function(game, player) {
+		db.query('SELECT id FROM `votes` INNER JOIN players ON players.id = votes.playerId WHERE players.name="' + player + '" and gameId=' + game, {type: db.QueryTypes.SELECT})
+		.then(function(rows) {
+			return rows.length > 0;
+		});
+		/*return Models.roster.findOne({where: {playerId: player, gameID: game}}).then((playerInstance) => {
+			return playerInstance !== null;
+		});*/
+	},
+	
 	addPlayerToGame: function(game, player) {
 		let insPlayer;
 		return Models.players.findOrCreate({where: {name: '' + player}}).then((playerInstance) => {
@@ -122,6 +132,58 @@ module.exports = {
 	getPlayers: function(game) {
 		return Models.games.findById(game, {include: {model: Models.players, as: 'Roster'}}).then((gameInstance) => {
 			return gameInstance.Roster;
+		});
+	},
+	
+	voteForPlayer: function(voter, target, game, post, day) {
+		let voterInstance, targetInstance;
+		return sequelize.transaction(function (t) {
+			return hasPlayerVotedToday(game, voter).then((result) => {
+				/*Logic to invalidate the old vote*/
+				if (result) {
+					return Models.votes.findOne({
+						include: [{
+							model: models.players,
+							as: 'Players',
+							where: { name: voter }
+						}],
+						where: {
+							current: true
+						}
+					}, {transaction: t}).then((record) => {
+						record.current = false;
+						return record.save({transaction: t});
+					});
+				} else {
+					return Promise.resolve();
+				}
+			}).then(() => {
+				//Get player id
+				return Models.players.findOne({
+					where: {
+						name: voter
+					}
+				});
+			}).then((result) => {
+				voterInstance = result;
+				//Get target ID
+				return Models.players.findOne({
+					where: {
+						name: target
+					}
+				});
+			}).then((result) => {
+				targetInstance = result;
+				//Add vote
+				let vote = Models.votes.build({
+					post: post,
+					day: day,
+					current: true,
+					voter: voterInstance,
+					target: targetInstance
+				});
+				return vote.save({transaction: t});
+			})
 		});
 	}
 };

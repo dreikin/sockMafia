@@ -16,6 +16,16 @@ module.exports = (db) => {
         post: {
             type: orm.INTEGER,
             allowNull: false
-        }
+        },
+		day: {
+			type: orm.INTEGER,
+			allowNull: false
+		},
+		//Is the current vote?
+		current: {
+			type: orm.BOOLEAN,
+			allowNull: false,
+			defaultValue: true
+		}
     });
 };
