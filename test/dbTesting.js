@@ -1,0 +1,125 @@
+'use strict';
+/*globals describe, it*/
+
+const chai = require('chai'),
+	sinon = require('sinon');
+	
+//promise library plugins
+require('sinon-as-promised');
+require('chai-as-promised');
+
+chai.should();
+const expect = chai.expect;
+const sqlite3 = require('sqlite3');
+
+const mafiaDAO = require('../src/dao.js');
+
+const fakeConfig = {
+	db: './mafiadbTesting.db'
+};
+
+describe('The Database', () => {
+
+	let sandbox, notificationSpy, commandSpy;
+	before(() => {
+		return mafiaDAO.createDB(fakeConfig);
+	});
+	beforeEach(() => {
+		sandbox = sinon.sandbox.create();
+	});
+	afterEach(() => {
+		sandbox.restore();
+	});
+	
+	it('should exist', () => {
+		let db = new sqlite3.Database(fakeConfig.db);
+		expect(db).to.be.a('object');
+	});
+
+	describe('Players table', () => {
+		it('should be a table', (done) => {
+			let db = new sqlite3.Database(fakeConfig.db);
+			db.all('SELECT name FROM sqlite_master WHERE type="table" AND name="players";', (err, rows) => {
+				expect(err).to.be.null;
+				expect(rows.length).to.equal(1);
+				done();
+			});
+		});
+		
+		it('Should have a name column', (done) => {
+			let db = new sqlite3.Database(fakeConfig.db);
+			db.all('SELECT name FROM players', (err, rows) => {
+				expect(err).to.be.null;
+				done();
+			});		
+		});
+	});
+	
+	describe('Games table', () => {
+		it('should be a table', (done) => {
+			let db = new sqlite3.Database(fakeConfig.db);
+			db.all('SELECT name FROM sqlite_master WHERE type="table" AND name="games";', (err, rows) => {
+				expect(err).to.be.null;
+				expect(rows.length).to.equal(1);
+				done();
+			});
+		});
+	});
+	
+	describe('Roster table', () => {
+		it('should be a table', (done) => {
+			let db = new sqlite3.Database(fakeConfig.db);
+			db.all('SELECT name FROM sqlite_master WHERE type="table" AND name="roster";', (err, rows) => {
+				expect(err).to.be.null;
+				expect(rows.length).to.equal(1);
+				done();
+			});
+		});
+	});
+	
+	describe('Votes table', () => {
+		it('should be a table', (done) => {
+			let db = new sqlite3.Database(fakeConfig.db);
+			db.all('SELECT name FROM sqlite_master WHERE type="table" AND name="votes";', (err, rows) => {
+				expect(err).to.be.null;
+				expect(rows.length).to.equal(1);
+				done();
+			});
+		});
+	});
+});
+describe('The DAO', () => {
+
+	let sandbox, notificationSpy, commandSpy;
+	before(() => {
+		return mafiaDAO.createDB(fakeConfig);
+	});
+	beforeEach(() => {
+		sandbox = sinon.sandbox.create();
+	});
+	afterEach(() => {
+		sandbox.restore();
+	});
+	
+	describe('ensureGameExists', () => {
+		it('should insert when no game exists', () => {
+			return mafiaDAO.ensureGameExists(1234).then(() => {
+				let db = new sqlite3.Database(fakeConfig.db);
+				db.all('SELECT id FROM games WHERE id=1234;', (err, rows) => {
+					expect(err).to.be.null;
+					expect(rows.length).to.equal(1);
+				});
+			})
+		});
+		
+		it('should not reinsert when the game already exists', () => {
+			return mafiaDAO.ensureGameExists(1234).then(() => {
+				let db = new sqlite3.Database(fakeConfig.db);
+				db.all('SELECT id FROM games WHERE id=1234;', (err, rows) => {
+					expect(err).to.be.null;
+					expect(rows.length).to.equal(1);
+				});
+			})
+		});
+	});
+});
