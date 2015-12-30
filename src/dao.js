@@ -96,9 +96,27 @@ module.exports = {
 		}
 	},
 
-	// This needs to be split into "createGame" (mod only) and "findGame"
 	ensureGameExists: function(id) {
-		return Models.games.findOrCreate({where: {id: '' + id}, defaults: {status: 'prep', currentDay: 0, stage: 'night'}});
+		return Models.games.findOne({where: {id: '' + id}}).then((results) => {
+			if (results.length > 0) {
+				return Promise.resolve();
+			} else {
+				return Promise.reject('Game does not exist');
+			};
+		});
+	},
+	
+	createGame: function(id, name, mod) {
+		Models.games.build({
+				id: id,
+				name: name
+				/*TODO: Join to Players for game owner.*/
+		});
+	},
+	
+	isPlayerMod(player, game) {
+		//For testing purposes, and until the above is resolved, everyone is the mod
+		return Promise.resolve(true);
 	},
 
 	isPlayerInGame: function(game, player) {
@@ -137,6 +155,18 @@ module.exports = {
 			insPlayer = playerInstance[0];
 			return Models.roster.findOrCreate({where: {playerId: insPlayer.id, gameId: game, player_status: 'alive'}});
 		}).then(db.sync());		
+	},
+	
+	killPlayer: function(game, player) {
+		let insPlayer, insRoster;
+		return Models.players.findOne({where: {name: '' + player}}).then((playerInstance) => {
+			insPlayer = playerInstance[0];
+			return Models.roster.findOne({where: {playerId: insPlayer.id, gameId: game}});
+		}).then((rosterInstance) => {
+			insRoster = rosterInstance[0];
+			insRoster.player_status = 'dead';
+			return db.sync();
+		});		
 	},
 
 	addVote: function(game, post, voter, target) {

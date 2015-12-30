@@ -178,7 +178,45 @@ exports.joinHandler = function joinHandler(command) {
 	});
 };
 
-exports.killHandler = function killHandler(command) {};
+exports.killHandler = function killHandler(command) {
+	const gameName = command.args[0].toLowerCase();
+	const target = command.args[1].toLowerCase().replace(/^@?(.*)/, '$1');
+	const mod = command.post.username.toLowerCase();
+	let game;
+	
+	return dao.getGameID(gameName)
+		.then((id) => {
+			if (!id) {
+				return Promise.reject('No such game');
+			}
+			game = id;
+			return dao.ensureGameExists(game);
+		})
+		.then(() => dao.isPlayerMod(game, mod))
+		.then((isMod) => {
+			if (!isMod) {
+				return Promise.reject('Poster is not mod');
+			}
+			return dao.isPlayerInGame(game, target);
+		})
+		.then((inGame) => {
+			if (!inGame) {
+				return Promise.reject('Target not in game');
+			}
+			return dao.isPlayerAlive(game, target);
+		})
+		.then((isAlive) => {
+			if (!isAlive) {
+				return Promise.reject('Target not alive');
+			}
+			return dao.killPlayer(game, target);
+		}).then(() => {
+			const text = 'Killed @' + target + ' in game ' + gameName;
+			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+			return Promise.resolve();
+		});
+};
+
 exports.dayHandler = function dayHandler(command) {};
 exports.listVotesHandler = function listVotesHandler(command) {};
 exports.listAllVotesHandler = function listAllVotesHandler(command) {};
@@ -274,13 +312,15 @@ function registerCommands(events) {
 	events.onCommand('echo', 'echo a bunch of post info (for diagnostic purposes)', exports.echoHandler, () => 0);
 	events.onCommand('for', 'vote for a player to be executed', exports.voteHandler, () => 0);
 	events.onCommand('join', 'join current mafia game', exports.joinHandler, () => 0);
-	events.onCommand('kill', 'kill a player (mod only)', exports.killHandler, () => 0);
 	events.onCommand('list-all-players', 'list all players, dead and alive', exports.listAllPlayersHandler, () => 0);
 	events.onCommand('list-all-votes', 'list all votes from the game\'s start', exports.listAllVotesHandler, () => 0);
 	events.onCommand('list-players', 'list all players still alive', exports.listPlayersHandler, () => 0);
 	events.onCommand('list-votes', 'list all votes from the day\'s start', exports.listVotesHandler, () => 0);
-	events.onCommand('new-day', 'move on to a new day (mod only)', exports.dayHandler, () => 0);
 	events.onCommand('vote', 'vote for a player to be executed (alt. form)', exports.voteHandler, () => 0);
+	
+	/*Mod commands*/
+	events.onCommand('new-day', 'move on to a new day (mod only)', exports.dayHandler, () => 0);
+	events.onCommand('kill', 'kill a player (mod only)', exports.killHandler, () => 0);
 }
 
 /**
