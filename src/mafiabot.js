@@ -145,7 +145,20 @@ exports.voteHandler = function voteHandler(command) {
 				+ command.post.username + ', post:' + command.post.post_number + ', topic:' + command.post.topic_id + '"]\n'
 				+ command.input + '\n[/quote]';
 			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
-			return Promise.resolve();
+			
+			return dao.getNumToLynch(game);
+		}).then((num) => {
+			/*Execution handler*/
+			return dao.getNumVotesForPlayer(game, target).then((numVotes) => {
+				if (num >= numVotes) {
+					dao.killPlayer(game, target).then(() => {
+						return dao.setDayState(game, 'night');
+					}).then(() => {
+						const text = '@' + target + ' has been lynched! Stay tuned for the flip. <b>It is now Night</b>';
+						internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+					});
+				}
+			});
 		});
 };
 

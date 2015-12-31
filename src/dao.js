@@ -213,5 +213,26 @@ module.exports = {
 
 	getPlayers: function(game) {
 		return Models.roster.findAll({where: {gameId: game}, include: [Models.players]});
+	},
+	
+	getLivingPlayers: function(game) {
+		/*TODO: Filter*/
+		return Models.roster.findAll({where: {gameId: game}, include: [Models.players]});
+	},
+	
+	getNumToLynch: function(game) {
+		return module.exports.getLivingPlayers(game).then((players) => {
+			return Math.ceil(players.length / 2);
+		});
+	},
+	
+	getNumVotesForPlayer: function(game, player) {
+		return Promise.resolve(0);
+		/*TODO: This is a stub because I don't understand how Dreikin wants to handle current vs old votes*/
+	},
+	
+	setDayState: function(game, state) {
+		/*TODO: This is a stub*/
+		return Promise.resolve();
 	}
 };
