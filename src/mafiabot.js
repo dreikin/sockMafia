@@ -286,7 +286,7 @@ exports.listVotesHandler = function listVotesHandler(command) {
 			
 			if (row.isCurrent) {
 				data.votes[row.votee].num++;
-				currentlyVoting.push(row.votee);
+				currentlyVoting.push(row.voter);
 			};
 
 			data.votes[row.votee].names.push({
