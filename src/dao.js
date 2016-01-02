@@ -97,8 +97,8 @@ module.exports = {
 	},
 
 	ensureGameExists: function(id) {
-		return Models.games.findOne({where: {id: id}}).then((results) => {
-			if (results.length > 0) {
+		return Models.games.findOne({where: {id: id}}).then((result) => {
+			if (result) {
 				return Promise.resolve();
 			} else {
 				return Promise.reject('Game does not exist');
