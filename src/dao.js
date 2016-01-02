@@ -107,7 +107,7 @@ module.exports = {
 	},
 	
 	createGame: function(id, name, mod) {
-		Models.games.build({
+		return Models.games.build({
 				id: id,
 				name: name
 				/*TODO: Join to Players for game owner.*/

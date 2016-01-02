@@ -168,7 +168,7 @@ exports.voteHandler = function voteHandler(command) {
 exports.startHandler = function startHandler(command) {
 	const id = command.post.topic_id;
 	const player = command.post.username;
-	const gameName = command.args[0].toLowerCase();
+	const gameName = command.args[0];
 	
 	const reportError = (error) => {
 		internals.browser.createPost(command.post.topic_id,
