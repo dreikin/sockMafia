@@ -273,7 +273,7 @@ exports.listVotesHandler = function listVotesHandler(command) {
 	.then(dao.getCurrentDay(id))
 	.then((day) => {
 		data.day = day;
-		return dao.getgetAllVotesForDay(id, day);
+		return dao.getAllVotesForDay(id, day);
 	}).then((rows) => {
 		rows.forEach((row) => {
 			if (!data.votes.hasOwnProperty(row.votee)) {
