@@ -165,6 +165,28 @@ exports.voteHandler = function voteHandler(command) {
 		});
 };
 
+exports.startHandler = function startHandler(command) {
+	const id = command.post.topic_id;
+	const player = command.post.username;
+	const gameName = command.args[0].toLowerCase();
+	
+	const reportError = (error) => {
+		internals.browser.createPost(command.post.topic_id,
+									command.post.post_number,
+									'Error when starting game: ' + error, () => 0);
+	};
+	
+	return dao.createGame(id, gameName, player)
+	.then((answer) => {
+		internals.browser.createPost(command.post.topic_id,
+											command.post.post_number,
+											'Game ' + gameName + 'created! The  mod is @' + player, () => 0);
+	})
+	.catch((err) => {
+		reportError(err);
+	});
+};
+
 exports.joinHandler = function joinHandler(command) {
 	const id = command.post.topic_id;
 	const player = command.post.username;
@@ -395,6 +417,7 @@ function registerCommands(events) {
 	events.onCommand('vote', 'vote for a player to be executed (alt. form)', exports.voteHandler, () => 0);
 	
 	/*Mod commands*/
+	events.onCommand('start', 'Start a new game', exports.startHandler, () => 0);
 	events.onCommand('new-day', 'move on to a new day (mod only)', exports.dayHandler, () => 0);
 	events.onCommand('kill', 'kill a player (mod only)', exports.killHandler, () => 0);
 }
