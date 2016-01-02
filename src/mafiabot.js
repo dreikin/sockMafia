@@ -290,7 +290,7 @@ exports.listVotesHandler = function listVotesHandler(command) {
 			
 			if (row.isCurrent) {
 				data.votes[row.votee].num++;
-				data.votes[row.votee].percent = data.votes[row.votee].num / data.toExecute;
+				data.votes[row.votee].percent = (data.votes[row.votee].num / data.toExecute) * 100;
 				currentlyVoting.push(row.voter);
 			};
 
