@@ -308,7 +308,7 @@ exports.listVotesHandler = function listVotesHandler(command) {
 									return currentlyVoting.indexOf(element) < 0;
 									});
 		data.numNotVoting = data.notVoting.length;
-		return readFile('./templates/voteTemplate.handlebars');
+		return readFile(__dirname + '/templates/voteTemplate.handlebars');
 	}).then((buffer) => {
 		const source = buffer.toString();
 		const template = Handlebars.compile(source);
