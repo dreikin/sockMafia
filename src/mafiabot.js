@@ -434,23 +434,25 @@ function registerCommands(events) {
 }
 
 function registerPlayers(game, players) {
-	/* Just output to log at the moment */
-	players.forEach((player) => {
-		console.log('Mafia: Adding player: ' + player);
-		dao.ensureGameExists(game)
-			.then(() => dao.isPlayerInGame(game, player.toLowerCase()))
-			.then((answer) => {
-				if (answer) {
-					return Promise.resolve();
-				} else {
-					return dao.addPlayerToGame(game, player.toLowerCase());
-				}
+	return dao.ensureGameExists(game)
+		.then(() => {
+			Promise.mapSeries(players, function(player, index, length) {
+				console.log('Mafia: Adding player: ' + player);
+				return dao.isPlayerInGame(game, player.toLowerCase())
+					.then((answer) => {
+						if (answer) {
+							return Promise.resolve();
+						} else {
+							return dao.addPlayerToGame(game, player.toLowerCase());
+						}
+					})
+					.catch((err) => {
+						console.log('Mafia: Adding player: failed to add player: ' + player
+							+ '\n\tReason: ' + err);
+						return Promise.resolve();
+					})
 			})
-			.catch((err) => {
-				console.log('Mafia: Adding player: failed to add player: ' + player
-					+ '\n\tReason: ' + err);
-			});
-	});
+		});
 }
 
 /**
