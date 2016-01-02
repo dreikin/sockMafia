@@ -111,7 +111,7 @@ module.exports = {
 				id: id,
 				name: name
 				/*TODO: Join to Players for game owner.*/
-		});
+		}).save();
 	},
 	
 	isPlayerMod(player, game) {
