@@ -305,7 +305,7 @@ exports.listVotesHandler = function listVotesHandler(command) {
 		const players = rows.map((row) => {
 			return row.name;
 		});
-		
+		data.numPlayers = players.length;
 		data.notVoting = players.filter((element) => { 
 									return currentlyVoting.indexOf(element) < 0;
 									});
