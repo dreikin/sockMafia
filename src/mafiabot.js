@@ -433,10 +433,23 @@ function registerCommands(events) {
 	events.onCommand('kill', 'kill a player (mod only)', exports.killHandler, () => 0);
 }
 
-function registerPlayers(players) {
+function registerPlayers(game, players) {
 	/* Just output to log at the moment */
 	players.forEach((player) => {
 		console.log('Mafia: Adding player: ' + player);
+		dao.ensureGameExists(game)
+			.then(() => dao.isPlayerInGame(game, player.toLowerCase()))
+			.then((answer) => {
+				if (answer) {
+					return Promise.resolve();
+				} else {
+					return dao.addPlayerToGame(game, player.toLowerCase());
+				}
+			})
+			.catch((err) => {
+				console.log('Mafia: Adding player: failed to add player: ' + player
+					+ '\n\tReason: ' + err);
+			});
 	});
 }
 
@@ -470,10 +483,10 @@ exports.prepare = function prepare(plugConfig, config, events, browser) {
 					+ '\tReason: ' + reason);
 				return Promise.reject('Game not created');
 			}
-		});
+		})
+		.then(() => registerPlayers(plugConfig.thread, plugConfig.players));
 	events.onNotification('mentioned', exports.mentionHandler);
 	registerCommands(events);
-	registerPlayers(plugConfig.players);
 };
 
 /**
