@@ -300,7 +300,7 @@ exports.listVotesHandler = function listVotesHandler(command) {
 		data.toExecute = num;
 		return dao.getLivingPlayers(id);
 	}).then((rows) => {
-		const players = rows.reduce((row) => {
+		const players = rows.map((row) => {
 			return row.name;
 		});
 		
