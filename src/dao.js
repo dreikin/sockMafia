@@ -109,7 +109,10 @@ module.exports = {
 	createGame: function(id, name, mod) {
 		return Models.games.build({
 				id: id,
-				name: name
+				name: name,
+				status: 'prep',
+				stage: 'day',
+				currentDay: 0
 				/*TODO: Join to Players for game owner.*/
 		}).save();
 	},
