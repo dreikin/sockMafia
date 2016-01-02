@@ -1,3 +1,4 @@
+'use strict';
 const Handlebars = require('Handlebars');
 
 module.exports = function(percent) {
