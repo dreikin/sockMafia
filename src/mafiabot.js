@@ -461,7 +461,7 @@ exports.prepare = function prepare(plugConfig, config, events, browser) {
 	internals.browser = browser;
 	internals.configuration = config.mergeObjects(true, exports.defaultConfig, plugConfig);
 	dao.createDB(internals.configuration)
-		.then(dao.ensureGameExists(plugConfig.thread))
+		.then(() => dao.ensureGameExists(plugConfig.thread))
 		.catch((reason) => {
 			if (reason === 'Game does not exist') {
 				return dao.createGame(plugConfig.thread);
