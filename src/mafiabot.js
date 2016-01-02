@@ -121,7 +121,7 @@ exports.voteHandler = function voteHandler(command) {
 			return Promise.resolve();
 		})
 		.catch((reason) => {
-			let text;
+			let text = ':wtf:';
 
 			if (reason === 'Voter not in game') {
 				text = '@' + voter + ': You are not yet a player.\n'
@@ -137,6 +137,8 @@ exports.voteHandler = function voteHandler(command) {
 			} else if (reason === 'Vote failed') {
 				text = ':wtf:\nSorry, @' + voter + ': your vote failed.  No, I don\'t know why.'
 					+ ' You\'ll have to ask @' + internals.configuration.owner + ' about that.';
+			} else {
+				text += '\n' + reason;
 			}
 
 			text += '\n<hr />\n';
@@ -349,6 +351,15 @@ exports.listPlayersHandler = function listPlayersHandler(command) {
 				}
 			}
 
+			output += '##Mod(s):\n';
+			if (internals.configuration.mods.length <= 0) {
+				output += 'None.  Weird.';
+			} else {
+				internals.configuration.mods.forEach((mod) => {
+					output += '- ' + mod + '\n';
+				});
+			}
+
 			internals.browser.createPost(command.post.topic_id, command.post.post_number, output, () => 0);
 			return Promise.resolve();
 		}).catch((err) => {
@@ -422,6 +433,13 @@ function registerCommands(events) {
 	events.onCommand('kill', 'kill a player (mod only)', exports.killHandler, () => 0);
 }
 
+function registerPlayers(players) {
+	/* Just output to log at the moment */
+	players.forEach((player) => {
+		console.log('Mafia: Adding player: ' + player);
+	});
+}
+
 /**
  * Prepare Plugin prior to login
  *
@@ -442,9 +460,20 @@ exports.prepare = function prepare(plugConfig, config, events, browser) {
 	internals.events = events;
 	internals.browser = browser;
 	internals.configuration = config.mergeObjects(true, exports.defaultConfig, plugConfig);
-	dao.createDB(internals.configuration);
+	dao.createDB(internals.configuration)
+		.then(dao.ensureGameExists(plugConfig.thread))
+		.catch((reason) => {
+			if (reason === 'Game does not exist') {
+				return dao.createGame(plugConfig.thread);
+			} else {
+				console.log('Mafia: Error: Game not added to database.\n'
+					+ '\tReason: ' + reason);
+				return Promise.reject('Game not created');
+			}
+		});
 	events.onNotification('mentioned', exports.mentionHandler);
 	registerCommands(events);
+	registerPlayers(plugConfig.players);
 };
 
 /**

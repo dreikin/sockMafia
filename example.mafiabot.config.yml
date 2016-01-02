@@ -13,5 +13,9 @@ core:
 plugins:
   './plugins/mafiabot'
     thread: 52778
-    mod: moduser
+    mods:
+     - mod
+    players:
+     - player1
+     - player2
     db: './mafiadb'
