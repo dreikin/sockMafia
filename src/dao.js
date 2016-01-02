@@ -231,6 +231,31 @@ module.exports = {
 		/*TODO: This is a stub because I don't understand how Dreikin wants to handle current vs old votes*/
 	},
 	
+	getCurrentDay: function(game, day) {
+		/*TODO: this is a stub */
+		return Promise.resolve(1);
+	},
+	
+	getAllVotesForDay: function(game, day) {
+		/*TODO: This is a stub. Expected format for return is an array of instances*/
+		const fakeData = [
+			{
+				post: 123,
+				voter: 'yamikuronue',
+				votee: 'accalia',
+				isCurrent: true
+			},
+			{
+				post: 124,
+				voter: 'accalia',
+				votee: 'yamikuronue',
+				isCurrent: false
+			}
+		];
+		
+		return Promise.resolve(fakeData);
+	},
+	
 	setDayState: function(game, state) {
 		/*TODO: This is a stub*/
 		return Promise.resolve();

@@ -10,6 +10,9 @@
  */
 
 const dao = require('./dao.js');
+const readFile = require('fs-readfile-promise');
+const Handlebars = require('handlebars');
+
 
 const internals = {
 	browser: null,
@@ -231,7 +234,65 @@ exports.killHandler = function killHandler(command) {
 };
 
 exports.dayHandler = function dayHandler(command) {};
-exports.listVotesHandler = function listVotesHandler(command) {};
+
+exports.listVotesHandler = function listVotesHandler(command) {
+	const data = {
+			day: 0,
+			votes: {},
+			notVoting: {},
+			toExecute: 0
+		};
+		
+	const currentlyVoting = [];
+		
+	const id = command.post.topic_id;
+	return dao.ensureGameExists(id)
+	.then(dao.getCurrentDay(id))
+	.then((day) => {
+		data.day = day;
+		return dao.getgetAllVotesForDay(id, day);
+	}).then((rows) => {
+		rows.forEach((row) => {
+			if (!data.votes.hasOwnProperty(row.votee)) {
+				data.votes[row.votee] = {
+					target: row.votee,
+					num: 0,
+					names: []
+				};
+			}
+			
+			if (row.isCurrent) {
+				data.votes[row.votee].num++;
+				currentlyVoting.push(row.votee);
+			};
+
+			data.votes[row.votee].names.push({
+				voter: row.voter, 
+				valid: row.isCurrent
+			});
+		});
+		
+		return dao.getgetNumToLynch(id);		
+	}).then((num) => {
+		data.toExecute = num;
+		return dao.getgetLivingPlayers(id);
+	}).then((rows) => {
+		const players = rows.reduce((row) => {
+			return row.name;
+		});
+		
+		data.notVoting = players.filter((element) => { 
+									return currentlyVoting.indexOf(element) < 0;
+									});
+		return readFile('./templates/voteTemplate.handlebars');
+	}).then((buffer) => {
+		const source = buffer.toString();
+		const template = Handlebars.compile(source);
+		
+		const output = template(data);
+		internals.browser.createPost(command.post.topic_id, command.post.post_number, output, () => 0);
+	});
+};
 exports.listAllVotesHandler = function listAllVotesHandler(command) {};
 
 exports.listPlayersHandler = function listPlayersHandler(command) {
