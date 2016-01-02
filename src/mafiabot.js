@@ -239,6 +239,7 @@ exports.listVotesHandler = function listVotesHandler(command) {
 	const data = {
 			day: 0,
 			votes: {},
+			numNotVoting: 0,
 			notVoting: {},
 			toExecute: 0
 		};
@@ -268,7 +269,7 @@ exports.listVotesHandler = function listVotesHandler(command) {
 
 			data.votes[row.votee].names.push({
 				voter: row.voter, 
-				valid: row.isCurrent
+				retracted: !row.isCurrent
 			});
 		});
 		
@@ -284,6 +285,7 @@ exports.listVotesHandler = function listVotesHandler(command) {
 		data.notVoting = players.filter((element) => { 
 									return currentlyVoting.indexOf(element) < 0;
 									});
+		data.numNotVoting = data.notVoting.length;
 		return readFile('./templates/voteTemplate.handlebars');
 	}).then((buffer) => {
 		const source = buffer.toString();

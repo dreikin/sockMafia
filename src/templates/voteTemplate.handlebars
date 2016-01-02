@@ -1,0 +1,15 @@
+<u>Votecount for Day {{day}}</u>
+  <table>
+  {{#each votes}}
+  <tr>
+  <td>bar goes here </td>
+  <td><b>{{target}} ({{num}})</b>:</td>
+  <td>{{#each votes}}<b>{{#if retracted}}<s>{{/if}}{{voter}}{{#if retracted}}</s>{{/if}},{{/each}}
+  </tr>
+  {{/each}}
+  <tr>
+  <td></td>
+  <td>Not Voting ({{numNotVoting}}):</td>
+  <td>{{#each notVoting}}{{this}},{{/each}}</td>
+  </tr>
+  </table>
