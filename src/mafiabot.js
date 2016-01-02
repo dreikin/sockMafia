@@ -295,10 +295,10 @@ exports.listVotesHandler = function listVotesHandler(command) {
 			});
 		});
 		
-		return dao.getgetNumToLynch(id);		
+		return dao.getNumToLynch(id);		
 	}).then((num) => {
 		data.toExecute = num;
-		return dao.getgetLivingPlayers(id);
+		return dao.getLivingPlayers(id);
 	}).then((rows) => {
 		const players = rows.reduce((row) => {
 			return row.name;
