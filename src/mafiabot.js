@@ -12,6 +12,7 @@
 const dao = require('./dao.js');
 const readFile = require('fs-readfile-promise');
 const Handlebars = require('handlebars');
+const Promise = require('bluebird');
 
 
 const internals = {
