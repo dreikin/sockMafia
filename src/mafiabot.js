@@ -273,19 +273,24 @@ exports.listVotesHandler = function listVotesHandler(command) {
 	.then(dao.getCurrentDay(id))
 	.then((day) => {
 		data.day = day;
-		return dao.getAllVotesForDay(id, day);
+		return dao.getNumToLynch(id);
+	}).then((num) => {
+		data.toExecute = num;
+		return dao.getAllVotesForDay(id, data.day);
 	}).then((rows) => {
 		rows.forEach((row) => {
 			if (!data.votes.hasOwnProperty(row.votee)) {
 				data.votes[row.votee] = {
 					target: row.votee,
 					num: 0,
+					percent: 0,
 					names: []
 				};
 			}
 			
 			if (row.isCurrent) {
 				data.votes[row.votee].num++;
+				data.votes[row.votee].percent = data.votes[row.votee].num / data.toExecute;
 				currentlyVoting.push(row.voter);
 			};
 
@@ -295,9 +300,6 @@ exports.listVotesHandler = function listVotesHandler(command) {
 			});
 		});
 		
-		return dao.getNumToLynch(id);		
-	}).then((num) => {
-		data.toExecute = num;
 		return dao.getLivingPlayers(id);
 	}).then((rows) => {
 		const players = rows.map((row) => {
@@ -312,6 +314,8 @@ exports.listVotesHandler = function listVotesHandler(command) {
 	}).then((buffer) => {
 		const source = buffer.toString();
 		const template = Handlebars.compile(source);
+		
+		Handlebars.registerHelper('voteChart', require('./templates/helpers/voteChart'));
 		
 		const output = template(data);
 		internals.browser.createPost(command.post.topic_id, command.post.post_number, output, () => 0);

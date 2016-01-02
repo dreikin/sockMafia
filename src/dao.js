@@ -225,7 +225,11 @@ module.exports = {
 	
 	getNumToLynch: function(game) {
 		return module.exports.getLivingPlayers(game).then((players) => {
-			return Math.ceil(players.length / 2);
+			let num = Math.ceil(players.length / 2);
+			if (num <= 0) {
+				num = 1;
+			};
+			return num;
 		});
 	},
 	

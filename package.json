@@ -21,7 +21,7 @@
   },
   "homepage": "https://github.com/yamikuronue/sockMafia#readme",
   "dependencies": {
-    "fs-readfile-promise": "^2.0.1",
+   "fs-readfile-promise": "^2.0.1",
     "handlebars": "^4.0.5",
     "sequelize": "^3.15.1",
     "sockbot": "^2.10.0",
