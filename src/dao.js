@@ -177,8 +177,7 @@ module.exports = {
 			insPlayer = playerInstance;
 			return Models.roster.findOne({where: {playerId: insPlayer.id, gameId: game}});
 		}).then((rosterInstance) => {
-			insRoster = rosterInstance[0];
-			insRoster.player_status = 'dead';
+			rosterInstance.player_status = 'dead';
 			return db.sync();
 		});
 	},
