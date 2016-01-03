@@ -264,7 +264,7 @@ module.exports = {
 	},
 
 	getAllVotesForDay: function(game, day) {
-		return Models.votes.findAll({where: {gameId: game, day: day}, include: [Models.players]})
+		return Models.votes.findAll({where: {gameId: game, day: day}, include: [{model: Models.players, as: 'voter'}, {model: Models.players, as: 'target'}]});
 	},
 	
 	setDayState: function(game, state) {
