@@ -97,6 +97,12 @@ module.exports = {
 			return Promise.resolve();
 		}
 	},
+	
+	getGameID(gameName) {
+		return Models.games.findOne({where: {name: gameName}}).then((result) => {
+			return result.id;
+		});
+	},
 
 	ensureGameExists: function(id) {
 		return Models.games.findOne({where: {id: id}}).then((result) => {
