@@ -283,12 +283,12 @@ exports.listVotesHandler = function listVotesHandler(command) {
 	}).then((votes) => {
 		let rows = [];
 		votes.old.forEach((vote) => {
-			vote.current = false;
+			vote.isCurrent = false;
 			rows.push(vote);
 		});
 
 		votes.current.forEach((vote) => {
-			vote.current = true;
+			vote.isCurrent = true;
 			rows.push(vote);
 		});
 
