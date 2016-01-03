@@ -5,7 +5,7 @@
  * Watches for @vote mentions and replies with a canned response
  *
  * @module mafiabot
- * @author Accalia, Dreikin
+ * @author Accalia, Dreikin, Yamikuronue
  * @license MIT
  */
 
