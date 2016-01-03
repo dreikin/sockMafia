@@ -435,7 +435,7 @@ exports.listPlayersHandler = function listPlayersHandler(command) {
 	return dao.ensureGameExists(id)
 		.then(() => dao.getPlayers(id))
 		.then( (rows) => {
-			const alive = [];
+			let alive = [];
 
 			rows.forEach((row) => {
 				if (row.player_status === 'alive') {
@@ -482,8 +482,8 @@ exports.listAllPlayersHandler = function listAllPlayersHandler(command) {
 	return dao.ensureGameExists(id)
 	.then(() => dao.getPlayers(id))
 	.then( (rows) => {
-		const alive = [];
-		const dead = [];
+		let alive = [];
+		let dead = [];
 
 		rows.forEach((row) => {
 			if (row.player_status === 'alive') {
