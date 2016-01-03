@@ -358,6 +358,10 @@ exports.listVotesHandler = function listVotesHandler(command) {
 			const votee = row.target.name;
 			const voter = row.voter.name;
 			
+			if (votee === 'nolynch') {
+				return; //Never count votes for NoLynch, that's an attempt to unvote
+			}
+			
 			if (!data.votes.hasOwnProperty(votee)) {
 				data.votes[votee] = {
 					target: votee,
