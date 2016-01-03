@@ -323,7 +323,7 @@ module.exports = {
 		return Models.games.findOne({where: {id: game}})
 		.then((gameInstance) => {
 			gameInstance.status = state;
-			return gameInstance.sync();
+			return gameInstance.save();
 		});
 	},
 	
@@ -331,7 +331,7 @@ module.exports = {
 		return Models.games.findOne({where: {id: game}})
 		.then((gameInstance) => {
 			gameInstance.stage = stage;
-			return gameInstance.sync();
+			return gameInstance.save();
 		});
 	},
 	
@@ -341,7 +341,7 @@ module.exports = {
 		.then((gameInstance) => {
 			newDay = gameInstance.currentDay++;
 			gameInstance.stage = 'day';
-			return gameInstance.sync();
+			return gameInstance.save();
 		}).then( () => {
 			return newDay;
 		});
