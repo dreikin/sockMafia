@@ -44,8 +44,8 @@ function createModel(config) {
 	// |- 1:1
 	//segment.hasOne(game);
 	// |- 1:N
-	player.hasMany(vote, {as: 'voter', foreignKey: 'voter'});
-	player.hasMany(vote, {as: 'target', foreignKey: 'target'});
+	player.hasMany(vote, {as: 'voter', foreignKey: 'voterId'});
+	player.hasMany(vote, {as: 'target', foreignKey: 'targetId'});
 	game.hasMany(vote);
 	// game.hasMany(segment);
 	// |- M:N
@@ -53,8 +53,8 @@ function createModel(config) {
 	game.belongsToMany(player, {through: roster});
 	roster.belongsTo(game);
 	roster.belongsTo(player);
-	vote.belongsTo(player, {as: 'voter', foreignKey: 'voter'});
-	vote.belongsTo(player, {as: 'target', foreignKey: 'target'});
+	vote.belongsTo(player, {as: 'voter', foreignKey: 'voterId'});
+	vote.belongsTo(player, {as: 'target', foreignKey: 'targetId'});
 
 	// model handles
 	Models.players = player;
@@ -207,8 +207,8 @@ module.exports = {
 				const vote = Models.votes.build({
 					post: post,
 					day: result.currentDay,
-					voter: voterInstance.id,
-					target: targetInstance.id,
+					voterId: voterInstance.id,
+					targetId: targetInstance.id,
 					gameId: game
 				});
 				return vote.save({transaction: t});
