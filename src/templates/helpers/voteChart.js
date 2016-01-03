@@ -15,7 +15,7 @@ module.exports = function(percent) {
 		bgColor = '#FFFFFF';
 	}
 	let xml = '<svg xmlns="http://www.w3.org/2000/svg" width="110" height="15"> <rect x="0" y="0" width="100%" height="100%" fill="' + bgColor + '"/>';
-	xml += '<rect x="' + (100.0 - percent) + '" y="0" width="' + percent + '" height="100%" fill="' + fillColor + '"/>';
+	xml += '<rect x="' + (100.0 - percent) + '%" y="0" width="' + percent + '" height="100%" fill="' + fillColor + '"/>';
 	xml += '</svg>';
 	
 	const b64 = new Buffer(xml).toString('base64');
