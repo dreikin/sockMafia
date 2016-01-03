@@ -2,7 +2,7 @@
   <table>
   {{#each votes}}
   <tr>
-  <td><!--bar goes here --></td>
+  <td>{{voteChart percent}}</td>
   <td><b>{{target}} ({{num}})</b>:</td>
   <td>{{#each names}}<b>{{#if retracted}}<s>{{/if}}{{voter}}{{#if retracted}}</s>{{/if}},{{/each}}
   </tr>
