@@ -243,7 +243,7 @@ module.exports = {
 		return Promise.resolve(1);
 	},
 	
-	getAllVotesForDay: function(game, day) {
+	fakeGetAllVotesForDay: function(game, day) {
 		/*TODO: This is a stub. Expected format for return is an array of instances*/
 		const fakeData = [
 			{
@@ -261,6 +261,10 @@ module.exports = {
 		];
 		
 		return Promise.resolve(fakeData);
+	},
+
+	getAllVotesForDay: function(game, day) {
+		return Models.votes.findAll({where: {gameId: game, day: day}, include: [Models.players]})
 	},
 	
 	setDayState: function(game, state) {
