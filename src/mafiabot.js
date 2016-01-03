@@ -379,7 +379,9 @@ exports.listVotesHandler = function listVotesHandler(command) {
 
 			data.votes[votee].names.push({
 				voter: voter,
-				retracted: !row.isCurrent
+				retracted: !row.isCurrent,
+				post: row.post,
+				game: id
 			});
 		});
 		

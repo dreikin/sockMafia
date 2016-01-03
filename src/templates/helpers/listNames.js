@@ -1,13 +1,30 @@
 'use strict';
 const Handlebars = require('handlebars');
 
+const slugs = [
+	'slug',
+	'snail',
+	'randomBSForDiscourse',
+	'shoutOutToCodingHorror',
+	'bodge',
+	'stupidHack',
+	'iJustMetYouAndILoveYou',
+	'isAnyoneReadingThis',
+	'nativeAmericanShootingAStar',
+	'freeIpads',
+	'easterEgg',
+	'upupdowndownleftrightleftrightbastart',
+	'discourse-sucks-purple-monkey-balls',
+	'donateToAGDQ'
+];
+
 module.exports = function(list) {
 	list = list.map((value) => {
 		if (typeof value === 'object') {
 			if (value.retracted) {
-				value = '<s>' + value.voter + '</s>';
+				value = '<a href="/t/' + slugs[Math.random() * slugs.length] + '/' + value.game + '/' + value.post + '"><s>' + value.voter + '</s></a>';
 			} else {
-				value = value.voter;
+				value = '<a href="/t/' + slugs[Math.random() * slugs.length] + '/' + value.game + '/' + value.post + '">' + value.voter + '</a>';
 			}
 		}
 		return value;
