@@ -413,6 +413,7 @@ exports.listVotesHandler = function listVotesHandler(command) {
 		data.notVoting = players.filter((element) => {
 									return currentlyVoting.indexOf(element) < 0;
 									});
+		data.notVoting = shuffle(data.notVoting);
 		data.numNotVoting = data.notVoting.length;
 		return readFile(__dirname + '/templates/voteTemplate.handlebars');
 	}).then((buffer) => {
