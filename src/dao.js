@@ -221,13 +221,12 @@ module.exports = {
 	},
 	
 	getLivingPlayers: function(game) {
-		/*TODO: Filter*/
-		return Models.roster.findAll({where: {gameId: game}, include: [Models.players]});
+		return Models.roster.findAll({where: {gameId: game, status: 'alive'}, include: [Models.players]});
 	},
 	
 	getNumToLynch: function(game) {
 		return module.exports.getLivingPlayers(game).then((players) => {
-			let num = Math.ceil(players.length / 2);
+			let num = Math.ceil((players.length + 1) / 2);
 			if (num <= 0) {
 				num = 1;
 			};
@@ -235,14 +234,15 @@ module.exports = {
 		});
 	},
 	
-	getNumVotesForPlayer: function(game, player) {
+	getNumVotesForPlayer: function(game, day, player) {
 		return Promise.resolve(0);
 		/*TODO: This is a stub because I don't understand how Dreikin wants to handle current vs old votes*/
 	},
 	
-	getCurrentDay: function(game, day) {
+	getCurrentDay: function(game) {
 		/*TODO: this is a stub */
-		return Promise.resolve(1);
+		return Models.games.findOne({where: {id: game}})
+		.then((game) => { return game.currentDay; });
 	},
 	
 	fakeGetAllVotesForDay: function(game, day) {
@@ -276,7 +276,35 @@ module.exports = {
 	},
 
 	getAllVotesForDay: function(game, day) {
-		return Models.votes.findAll({where: {gameId: game, day: day}, include: [{model: Models.players, as: 'voter'}, {model: Models.players, as: 'target'}]});
+		return Models.votes.findAll({
+			where: {gameId: game, day: day},
+			include: [{model: Models.players, as: 'voter'}, {model: Models.players, as: 'target'}]
+		})
+		.reduce((votes, vote) => {
+				let idx = -1;
+				for( var i = 0; i < votes.current.length; i++) {
+					if (votes.current[i].voterId === vote.voterId) {
+						idx = i;
+						break;
+					}
+				}
+				if (idx === -1) {
+					/* no vote by voter yet */
+					return votes.current.push(vote);
+				} else {
+					/* need to find latest vote */
+					if (votes.current[idx].post > vote.post) {
+						/* current vote is latest */
+						return votes.old.push(vote);
+					} else {
+						/* new vote is latest */
+						votes.old.push(votes.current[idx]);
+						return (votes.current[idx] = vote);
+					}
+				}
+			},
+			{old: [], current: []}
+		);
 	},
 	
 	setDayState: function(game, state) {

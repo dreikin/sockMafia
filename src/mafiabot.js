@@ -280,6 +280,19 @@ exports.listVotesHandler = function listVotesHandler(command) {
 	}).then((num) => {
 		data.toExecute = num;
 		return dao.getAllVotesForDay(id, data.day);
+	}).then((votes) => {
+		let rows = [];
+		votes.old.forEach((vote) => {
+			vote.current = false;
+			rows.push(vote);
+		});
+
+		votes.current.forEach((vote) => {
+			vote.current = true;
+			rows.push(vote);
+		});
+
+		return rows;
 	}).then((rows) => {
 		rows.forEach((row) => {
 			const votee = row.target.name;
