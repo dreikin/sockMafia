@@ -265,7 +265,7 @@ exports.killHandler = function killHandler(command) {
 };
 
 exports.dayHandler = function dayHandler(command) {
-	const gameName = command.args[0];
+	const gameName = internals.configuration.name;
 	const mod = command.post.username.toLowerCase();
 	let game;
 	const data = {
