@@ -303,7 +303,7 @@ exports.listVotesHandler = function listVotesHandler(command) {
 		return dao.getLivingPlayers(id);
 	}).then((rows) => {
 		const players = rows.map((row) => {
-			return row.name;
+			return row.player.name;
 		});
 		data.numPlayers = players.length;
 		data.notVoting = players.filter((element) => { 
