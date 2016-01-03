@@ -12,5 +12,5 @@ module.exports = function(list) {
 		}
 		return value;
 	});
-	return new Handlebars.SafeString(list.join(','));
+	return new Handlebars.SafeString(list.join(', '));
 };
