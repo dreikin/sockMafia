@@ -279,9 +279,12 @@ exports.listVotesHandler = function listVotesHandler(command) {
 		return dao.getAllVotesForDay(id, data.day);
 	}).then((rows) => {
 		rows.forEach((row) => {
-			if (!data.votes.hasOwnProperty(row.votee)) {
-				data.votes[row.votee] = {
-					target: row.votee,
+			const votee = row.target.name;
+			const voter = row.voter.name;
+			
+			if (!data.votes.hasOwnProperty(votee)) {
+				data.votes[votee] = {
+					target: votee,
 					num: 0,
 					percent: 0,
 					names: []
@@ -289,13 +292,13 @@ exports.listVotesHandler = function listVotesHandler(command) {
 			}
 			
 			if (row.isCurrent) {
-				data.votes[row.votee].num++;
-				data.votes[row.votee].percent = (data.votes[row.votee].num / data.toExecute) * 100;
-				currentlyVoting.push(row.voter);
+				data.votes[votee].num++;
+				data.votes[votee].percent = (data.votes[votee].num / data.toExecute) * 100;
+				currentlyVoting.push(voter);
 			};
 
-			data.votes[row.votee].names.push({
-				voter: row.voter, 
+			data.votes[votee].names.push({
+				voter: voter, 
 				retracted: !row.isCurrent
 			});
 		});
