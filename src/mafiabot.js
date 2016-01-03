@@ -273,7 +273,7 @@ exports.listVotesHandler = function listVotesHandler(command) {
 		
 	const id = command.post.topic_id;
 	return dao.ensureGameExists(id)
-	.then(dao.getCurrentDay(id))
+	.then(() => dao.getCurrentDay(id))
 	.then((day) => {
 		data.day = day;
 		return dao.getNumToLynch(id);

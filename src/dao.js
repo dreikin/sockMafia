@@ -221,7 +221,7 @@ module.exports = {
 	},
 	
 	getLivingPlayers: function(game) {
-		return Models.roster.findAll({where: {gameId: game, status: 'alive'}, include: [Models.players]});
+		return Models.roster.findAll({where: {gameId: game, player_status: 'alive'}, include: [Models.players]});
 	},
 	
 	getNumToLynch: function(game) {
@@ -280,7 +280,8 @@ module.exports = {
 			where: {gameId: game, day: day},
 			include: [{model: Models.players, as: 'voter'}, {model: Models.players, as: 'target'}]
 		})
-		.reduce((votes, vote) => {
+		.reduce(
+			(votes, vote) => {
 				let idx = -1;
 				for( var i = 0; i < votes.current.length; i++) {
 					if (votes.current[i].voterId === vote.voterId) {
@@ -290,18 +291,20 @@ module.exports = {
 				}
 				if (idx === -1) {
 					/* no vote by voter yet */
-					return votes.current.push(vote);
+					votes.current.push(vote);
 				} else {
 					/* need to find latest vote */
 					if (votes.current[idx].post > vote.post) {
 						/* current vote is latest */
-						return votes.old.push(vote);
+						votes.old.push(vote);
 					} else {
 						/* new vote is latest */
 						votes.old.push(votes.current[idx]);
-						return (votes.current[idx] = vote);
+						votes.current[idx] = vote;
 					}
 				}
+
+				return votes;
 			},
 			{old: [], current: []}
 		);
