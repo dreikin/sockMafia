@@ -358,7 +358,7 @@ exports.listVotesHandler = function listVotesHandler(command) {
 			const votee = row.target.name;
 			const voter = row.voter.name;
 			
-			if (votee === 'nolynch') {
+			if (votee === 'nolynch' || votee === 'unvote') {
 				return; //Never count votes for NoLynch, that's an attempt to unvote
 			}
 			
@@ -576,7 +576,7 @@ exports.prepare = function prepare(plugConfig, config, events, browser) {
 		.then(() => dao.ensureGameExists(plugConfig.thread))
 		.catch((reason) => {
 			if (reason === 'Game does not exist') {
-				return dao.createGame(plugConfig.thread);
+				return dao.createGame(plugConfig.thread, plugConfig.name);
 			} else {
 				console.log('Mafia: Error: Game not added to database.\n'
 					+ '\tReason: ' + reason);

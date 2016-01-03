@@ -19,3 +19,4 @@ plugins:
      - player1
      - player2
     db: './mafiadb'
+    name: testMafia
