@@ -104,7 +104,7 @@ module.exports = {
 				return Promise.resolve();
 			} else {
 				return Promise.reject('Game does not exist');
-			};
+			}
 		});
 	},
 	
@@ -159,7 +159,7 @@ module.exports = {
 		return Models.players.findOrCreate({where: {name: '' + player}}).then((playerInstance) => {
 			insPlayer = playerInstance[0];
 			return Models.roster.findOrCreate({where: {playerId: insPlayer.id, gameId: game, player_status: 'alive'}});
-		}).then(db.sync());		
+		}).then(db.sync());
 	},
 	
 	killPlayer: function(game, player) {
@@ -171,7 +171,7 @@ module.exports = {
 			insRoster = rosterInstance[0];
 			insRoster.player_status = 'dead';
 			return db.sync();
-		});		
+		});
 	},
 
 	addVote: function(game, post, voter, target) {
@@ -229,7 +229,7 @@ module.exports = {
 			let num = Math.ceil((players.length + 1) / 2);
 			if (num <= 0) {
 				num = 1;
-			};
+			}
 			return num;
 		});
 	},
@@ -242,7 +242,9 @@ module.exports = {
 	getCurrentDay: function(game) {
 		/*TODO: this is a stub */
 		return Models.games.findOne({where: {id: game}})
-		.then((game) => { return game.currentDay; });
+		.then((gameInstance) => {
+			return gameInstance.currentDay
+		});
 	},
 	
 	fakeGetAllVotesForDay: function(game, day) {
@@ -283,7 +285,7 @@ module.exports = {
 		.reduce(
 			(votes, vote) => {
 				let idx = -1;
-				for( var i = 0; i < votes.current.length; i++) {
+				for ( let i = 0; i < votes.current.length; i++) {
 					if (votes.current[i].voterId === vote.voterId) {
 						idx = i;
 						break;

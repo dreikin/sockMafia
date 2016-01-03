@@ -147,8 +147,9 @@ exports.voteHandler = function voteHandler(command) {
 				+ ' in post #<a href="https://what.thedailywtf.com/t/'
 				+ command.post.topic_id + '/' + command.post.post_number + '">'
 				+ command.post.post_number + '</a>.\n\n'
-				+ 'Vote text:\n[quote="'
-				+ command.post.username + ', post:' + command.post.post_number + ', topic:' + command.post.topic_id + '"]\n'
+				+ 'Vote text:\n[quote="' + command.post.username
+				+ ', post:' + command.post.post_number
+				+ ', topic:' + command.post.topic_id + '"]\n'
 				+ command.input + '\n[/quote]';
 			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
 			
@@ -180,7 +181,7 @@ exports.startHandler = function startHandler(command) {
 	};
 	
 	return dao.createGame(id, gameName, player)
-	.then((answer) => {
+	.then(() => {
 		internals.browser.createPost(command.post.topic_id,
 											command.post.post_number,
 											'Game ' + gameName + 'created! The  mod is @' + player, () => 0);
@@ -335,7 +336,7 @@ exports.listVotesHandler = function listVotesHandler(command) {
 		data.toExecute = num;
 		return dao.getAllVotesForDay(id, data.day);
 	}).then((votes) => {
-		let rows = [];
+		const rows = [];
 		votes.old.forEach((vote) => {
 			vote.isCurrent = false;
 			rows.push(vote);
@@ -365,10 +366,10 @@ exports.listVotesHandler = function listVotesHandler(command) {
 				data.votes[votee].num++;
 				data.votes[votee].percent = (data.votes[votee].num / data.toExecute) * 100;
 				currentlyVoting.push(voter);
-			};
+			}
 
 			data.votes[votee].names.push({
-				voter: voter, 
+				voter: voter,
 				retracted: !row.isCurrent
 			});
 		});
@@ -379,7 +380,7 @@ exports.listVotesHandler = function listVotesHandler(command) {
 			return row.player.name;
 		});
 		data.numPlayers = players.length;
-		data.notVoting = players.filter((element) => { 
+		data.notVoting = players.filter((element) => {
 									return currentlyVoting.indexOf(element) < 0;
 									});
 		data.numNotVoting = data.notVoting.length;
@@ -517,10 +518,11 @@ function registerCommands(events) {
 	events.onCommand('kill', 'kill a player (mod only)', exports.killHandler, () => 0);
 }
 
+/*eslint-disable no-console*/
 function registerPlayers(game, players) {
 	return dao.ensureGameExists(game)
 		.then(() => {
-			Promise.mapSeries(players, function(player, index, length) {
+			return Promise.mapSeries(players, function(player) {
 				console.log('Mafia: Adding player: ' + player);
 				return dao.isPlayerInGame(game, player.toLowerCase())
 					.then((answer) => {
@@ -534,10 +536,11 @@ function registerPlayers(game, players) {
 						console.log('Mafia: Adding player: failed to add player: ' + player
 							+ '\n\tReason: ' + err);
 						return Promise.resolve();
-					})
-			})
+					});
+			});
 		});
 }
+/*eslint-enable no-console*/
 
 /**
  * Prepare Plugin prior to login
@@ -547,6 +550,7 @@ function registerPlayers(game, players) {
  * @param {externals.events.SockEvents} events EventEmitter used for the bot
  * @param {Browser} browser Web browser for communicating with discourse
  */
+/*eslint-disable no-console*/
 exports.prepare = function prepare(plugConfig, config, events, browser) {
 	if (Array.isArray(plugConfig)) {
 		plugConfig = {
@@ -574,6 +578,7 @@ exports.prepare = function prepare(plugConfig, config, events, browser) {
 	events.onNotification('mentioned', exports.mentionHandler);
 	registerCommands(events);
 };
+/*eslint-enable no-console*/
 
 /**
  * Start the plugin after login
