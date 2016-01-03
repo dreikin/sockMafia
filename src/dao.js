@@ -243,7 +243,7 @@ module.exports = {
 		/*TODO: this is a stub */
 		return Models.games.findOne({where: {id: game}})
 		.then((gameInstance) => {
-			return gameInstance.currentDay
+			return gameInstance.currentDay;
 		});
 	},
 	
