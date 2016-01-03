@@ -352,7 +352,7 @@ exports.listPlayersHandler = function listPlayersHandler(command) {
 				}
 			}
 
-			output += '##Mod(s):\n';
+			output += '###Mod(s):\n';
 			if (internals.configuration.mods.length <= 0) {
 				output += 'None.  Weird.';
 			} else {
@@ -409,6 +409,15 @@ exports.listAllPlayersHandler = function listAllPlayersHandler(command) {
 			for (let i = 0; i < numDead; i++) {
 				output += '- ' + dead[i] + '\n';
 			}
+		}
+
+		output += '###Mod(s):\n';
+		if (internals.configuration.mods.length <= 0) {
+			output += 'None.  Weird.';
+		} else {
+			internals.configuration.mods.forEach((mod) => {
+				output += '- ' + mod + '\n';
+			});
 		}
 
 		internals.browser.createPost(command.post.topic_id, command.post.post_number, output, () => 0);
