@@ -22,9 +22,9 @@ module.exports = function(list) {
 	list = list.map((value) => {
 		if (typeof value === 'object') {
 			if (value.retracted) {
-				value = '<a href="/t/' + slugs[Math.random() * slugs.length] + '/' + value.game + '/' + value.post + '"><s>' + value.voter + '</s></a>';
+				value = '<a href="/t/' + slugs[Math.floor(Math.random() * slugs.length)] + '/' + value.game + '/' + value.post + '"><s>' + value.voter + '</s></a>';
 			} else {
-				value = '<a href="/t/' + slugs[Math.random() * slugs.length] + '/' + value.game + '/' + value.post + '">' + value.voter + '</a>';
+				value = '<a href="/t/' + slugs[Math.floor(Math.random() * slugs.length)] + '/' + value.game + '/' + value.post + '">' + value.voter + '</a>';
 			}
 		}
 		return value;
