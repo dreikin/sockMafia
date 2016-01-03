@@ -248,7 +248,6 @@ module.exports = {
 	},
 	
 	getCurrentDay: function(game) {
-		/*TODO: this is a stub */
 		return Models.games.findOne({where: {id: game}})
 		.then((gameInstance) => {
 			return gameInstance.currentDay;
@@ -320,13 +319,31 @@ module.exports = {
 		);
 	},
 	
-	setDayState: function(game, state) {
-		/*TODO: This is a stub*/
-		return Promise.resolve();
+	setGameState: function(game, state) {
+		return Models.games.findOne({where: {id: game}})
+		.then((gameInstance) => {
+			gameInstance.status = state;
+			return gameInstance.sync();
+		});
 	},
 	
-	incrementDay: function(game, state) {
-		/*TODO: This is a stub*/
-		return Promise.resolve(2); //will be the new day number
+	setDayState: function(game, stage) {
+		return Models.games.findOne({where: {id: game}})
+		.then((gameInstance) => {
+			gameInstance.stage = stage;
+			return gameInstance.sync();
+		});
+	},
+	
+	incrementDay: function(game) {
+		let newDay;
+		return Models.games.findOne({where: {id: game}})
+		.then((gameInstance) => {
+			newDay = gameInstance.currentDay++;
+			gameInstance.stage = 'day';
+			return gameInstance.sync();
+		}).then( () => {
+			return newDay;
+		});
 	}
 };
