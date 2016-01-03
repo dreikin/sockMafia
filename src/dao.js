@@ -53,6 +53,8 @@ function createModel(config) {
 	game.belongsToMany(player, {through: roster});
 	roster.belongsTo(game);
 	roster.belongsTo(player);
+	vote.belongsTo(player, {as: 'voter', foreignKey: 'voter'});
+	vote.belongsTo(player, {as: 'target', foreignKey: 'target'});
 
 	// model handles
 	Models.players = player;
