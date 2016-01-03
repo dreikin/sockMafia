@@ -226,8 +226,8 @@ exports.joinHandler = function joinHandler(command) {
 };
 
 exports.killHandler = function killHandler(command) {
-	const gameName = command.args[0].toLowerCase();
-	const target = command.args[1].toLowerCase().replace(/^@?(.*)/, '$1');
+	const gameName = internals.configuration.name;
+	const target = command.args[0].toLowerCase().replace(/^@?(.*)/, '$1');
 	const mod = command.post.username.toLowerCase();
 	let game;
 	
