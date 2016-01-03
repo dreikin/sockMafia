@@ -174,7 +174,7 @@ module.exports = {
 			if (!playerInstance) {
 				throw new Error('No such player!');
 			}
-			insPlayer = playerInstance[0];
+			insPlayer = playerInstance;
 			return Models.roster.findOne({where: {playerId: insPlayer.id, gameId: game}});
 		}).then((rosterInstance) => {
 			insRoster = rosterInstance[0];
