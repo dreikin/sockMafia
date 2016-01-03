@@ -5,13 +5,14 @@
  * Watches for @vote mentions and replies with a canned response
  *
  * @module mafiabot
- * @author Accalia, Dreikin
+ * @author Accalia, Dreikin, Yamikuronue
  * @license MIT
  */
 
 const dao = require('./dao.js');
 const readFile = require('fs-readfile-promise');
 const Handlebars = require('handlebars');
+const Promise = require('bluebird');
 
 
 const internals = {
@@ -121,7 +122,7 @@ exports.voteHandler = function voteHandler(command) {
 			return Promise.resolve();
 		})
 		.catch((reason) => {
-			let text;
+			let text = ':wtf:';
 
 			if (reason === 'Voter not in game') {
 				text = '@' + voter + ': You are not yet a player.\n'
@@ -137,6 +138,8 @@ exports.voteHandler = function voteHandler(command) {
 			} else if (reason === 'Vote failed') {
 				text = ':wtf:\nSorry, @' + voter + ': your vote failed.  No, I don\'t know why.'
 					+ ' You\'ll have to ask @' + internals.configuration.owner + ' about that.';
+			} else {
+				text += '\n' + reason;
 			}
 
 			text += '\n<hr />\n';
@@ -144,8 +147,9 @@ exports.voteHandler = function voteHandler(command) {
 				+ ' in post #<a href="https://what.thedailywtf.com/t/'
 				+ command.post.topic_id + '/' + command.post.post_number + '">'
 				+ command.post.post_number + '</a>.\n\n'
-				+ 'Vote text:\n[quote="'
-				+ command.post.username + ', post:' + command.post.post_number + ', topic:' + command.post.topic_id + '"]\n'
+				+ 'Vote text:\n[quote="' + command.post.username
+				+ ', post:' + command.post.post_number
+				+ ', topic:' + command.post.topic_id + '"]\n'
 				+ command.input + '\n[/quote]';
 			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
 			
@@ -177,7 +181,7 @@ exports.startHandler = function startHandler(command) {
 	};
 	
 	return dao.createGame(id, gameName, player)
-	.then((answer) => {
+	.then(() => {
 		internals.browser.createPost(command.post.topic_id,
 											command.post.post_number,
 											'Game ' + gameName + 'created! The  mod is @' + player, () => 0);
@@ -324,13 +328,26 @@ exports.listVotesHandler = function listVotesHandler(command) {
 		
 	const id = command.post.topic_id;
 	return dao.ensureGameExists(id)
-	.then(dao.getCurrentDay(id))
+	.then(() => dao.getCurrentDay(id))
 	.then((day) => {
 		data.day = day;
 		return dao.getNumToLynch(id);
 	}).then((num) => {
 		data.toExecute = num;
 		return dao.getAllVotesForDay(id, data.day);
+	}).then((votes) => {
+		const rows = [];
+		votes.old.forEach((vote) => {
+			vote.isCurrent = false;
+			rows.push(vote);
+		});
+
+		votes.current.forEach((vote) => {
+			vote.isCurrent = true;
+			rows.push(vote);
+		});
+
+		return rows;
 	}).then((rows) => {
 		rows.forEach((row) => {
 			const votee = row.target.name;
@@ -349,10 +366,10 @@ exports.listVotesHandler = function listVotesHandler(command) {
 				data.votes[votee].num++;
 				data.votes[votee].percent = (data.votes[votee].num / data.toExecute) * 100;
 				currentlyVoting.push(voter);
-			};
+			}
 
 			data.votes[votee].names.push({
-				voter: voter, 
+				voter: voter,
 				retracted: !row.isCurrent
 			});
 		});
@@ -363,7 +380,7 @@ exports.listVotesHandler = function listVotesHandler(command) {
 			return row.player.name;
 		});
 		data.numPlayers = players.length;
-		data.notVoting = players.filter((element) => { 
+		data.notVoting = players.filter((element) => {
 									return currentlyVoting.indexOf(element) < 0;
 									});
 		data.numNotVoting = data.notVoting.length;
@@ -408,6 +425,15 @@ exports.listPlayersHandler = function listPlayersHandler(command) {
 				for (let i = 0; i < numLiving; i++) {
 					output += '- ' + alive[i] + '\n';
 				}
+			}
+
+			output += '###Mod(s):\n';
+			if (internals.configuration.mods.length <= 0) {
+				output += 'None.  Weird.';
+			} else {
+				internals.configuration.mods.forEach((mod) => {
+					output += '- ' + mod + '\n';
+				});
 			}
 
 			internals.browser.createPost(command.post.topic_id, command.post.post_number, output, () => 0);
@@ -460,6 +486,15 @@ exports.listAllPlayersHandler = function listAllPlayersHandler(command) {
 			}
 		}
 
+		output += '###Mod(s):\n';
+		if (internals.configuration.mods.length <= 0) {
+			output += 'None.  Weird.';
+		} else {
+			internals.configuration.mods.forEach((mod) => {
+				output += '- ' + mod + '\n';
+			});
+		}
+
 		internals.browser.createPost(command.post.topic_id, command.post.post_number, output, () => 0);
 		return Promise.resolve();
 	}).catch((err) => {
@@ -483,6 +518,30 @@ function registerCommands(events) {
 	events.onCommand('kill', 'kill a player (mod only)', exports.killHandler, () => 0);
 }
 
+/*eslint-disable no-console*/
+function registerPlayers(game, players) {
+	return dao.ensureGameExists(game)
+		.then(() => {
+			return Promise.mapSeries(players, function(player) {
+				console.log('Mafia: Adding player: ' + player);
+				return dao.isPlayerInGame(game, player.toLowerCase())
+					.then((answer) => {
+						if (answer) {
+							return Promise.resolve();
+						} else {
+							return dao.addPlayerToGame(game, player.toLowerCase());
+						}
+					})
+					.catch((err) => {
+						console.log('Mafia: Adding player: failed to add player: ' + player
+							+ '\n\tReason: ' + err);
+						return Promise.resolve();
+					});
+			});
+		});
+}
+/*eslint-enable no-console*/
+
 /**
  * Prepare Plugin prior to login
  *
@@ -491,6 +550,7 @@ function registerCommands(events) {
  * @param {externals.events.SockEvents} events EventEmitter used for the bot
  * @param {Browser} browser Web browser for communicating with discourse
  */
+/*eslint-disable no-console*/
 exports.prepare = function prepare(plugConfig, config, events, browser) {
 	if (Array.isArray(plugConfig)) {
 		plugConfig = {
@@ -503,10 +563,22 @@ exports.prepare = function prepare(plugConfig, config, events, browser) {
 	internals.events = events;
 	internals.browser = browser;
 	internals.configuration = config.mergeObjects(true, exports.defaultConfig, plugConfig);
-	dao.createDB(internals.configuration);
+	dao.createDB(internals.configuration)
+		.then(() => dao.ensureGameExists(plugConfig.thread))
+		.catch((reason) => {
+			if (reason === 'Game does not exist') {
+				return dao.createGame(plugConfig.thread);
+			} else {
+				console.log('Mafia: Error: Game not added to database.\n'
+					+ '\tReason: ' + reason);
+				return Promise.reject('Game not created');
+			}
+		})
+		.then(() => registerPlayers(plugConfig.thread, plugConfig.players));
 	events.onNotification('mentioned', exports.mentionHandler);
 	registerCommands(events);
 };
+/*eslint-enable no-console*/
 
 /**
  * Start the plugin after login
