@@ -163,6 +163,9 @@ exports.voteHandler = function voteHandler(command) {
 					}).then(() => {
 						const text = '@' + target + ' has been lynched! Stay tuned for the flip. <b>It is now Night</b>';
 						internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+					}).catch((error) => {
+						const text = 'Error when lynching dead player: ' + error.toString();
+						internals.browser.createPost(game, null, text, () => 0);
 					});
 				}
 			});

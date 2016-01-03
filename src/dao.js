@@ -165,6 +165,9 @@ module.exports = {
 	killPlayer: function(game, player) {
 		let insPlayer, insRoster;
 		return Models.players.findOne({where: {name: '' + player}}).then((playerInstance) => {
+			if (!playerInstance) {
+				throw new Error('No such player!');
+			}
 			insPlayer = playerInstance[0];
 			return Models.roster.findOne({where: {playerId: insPlayer.id, gameId: game}});
 		}).then((rosterInstance) => {
