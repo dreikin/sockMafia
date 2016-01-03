@@ -16,6 +16,25 @@ Handlebars.registerHelper('voteChart', require('./templates/helpers/voteChart'))
 Handlebars.registerHelper('listNames', require('./templates/helpers/listNames'));
 const Promise = require('bluebird');
 
+/*Fisher-Yates, from SO*/
+function shuffle(array) {
+  let currentIndex = array.length, temporaryValue, randomIndex;
+
+  // While there remain elements to shuffle...
+  while (0 !== currentIndex) {
+
+    // Pick a remaining element...
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex -= 1;
+
+    // And swap it with the current element.
+    temporaryValue = array[currentIndex];
+    array[currentIndex] = array[randomIndex];
+    array[randomIndex] = temporaryValue;
+  }
+
+  return array;
+}
 
 const internals = {
 	browser: null,
@@ -122,6 +141,21 @@ exports.voteHandler = function voteHandler(command) {
 				+ 'Vote text:\n[quote]\n' + command.input + '\n[/quote]';
 			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
 			return Promise.resolve();
+		}).then((num) => {
+			/*Execution handler*/
+			return dao.getNumVotesForPlayer(game, target).then((numVotes) => {
+				if (num >= numVotes) {
+					dao.killPlayer(game, target).then(() => {
+						return dao.setDayState(game, 'night');
+					}).then(() => {
+						const text = '@' + target + ' has been lynched! Stay tuned for the flip. <b>It is now Night</b>';
+						internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+					}).catch((error) => {
+						const text = 'Error when lynching dead player: ' + error.toString();
+						internals.browser.createPost(game, null, text, () => 0);
+					});
+				}
+			});
 		})
 		.catch((reason) => {
 			let text = ':wtf:';
@@ -156,21 +190,6 @@ exports.voteHandler = function voteHandler(command) {
 			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
 			
 			return dao.getNumToLynch(game);
-		}).then((num) => {
-			/*Execution handler*/
-			return dao.getNumVotesForPlayer(game, target).then((numVotes) => {
-				if (num >= numVotes) {
-					dao.killPlayer(game, target).then(() => {
-						return dao.setDayState(game, 'night');
-					}).then(() => {
-						const text = '@' + target + ' has been lynched! Stay tuned for the flip. <b>It is now Night</b>';
-						internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
-					}).catch((error) => {
-						const text = 'Error when lynching dead player: ' + error.toString();
-						internals.browser.createPost(game, null, text, () => 0);
-					});
-				}
-			});
 		});
 };
 
@@ -425,6 +444,7 @@ exports.listPlayersHandler = function listPlayersHandler(command) {
 			});
 
 			const numLiving = alive.length;
+			alive = shuffle(alive);
 
 			let output = '##Player List\n';
 			output += '###Living:\n';
@@ -475,6 +495,9 @@ exports.listAllPlayersHandler = function listAllPlayersHandler(command) {
 
 		const numLiving = alive.length;
 		const numDead = dead.length;
+		
+		alive = shuffle(alive);
+		dead = shuffle(dead);
 
 		let output = '##Player List\n';
 		output += '###Living:\n';
