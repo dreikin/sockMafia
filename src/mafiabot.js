@@ -12,6 +12,8 @@
 const dao = require('./dao.js');
 const readFile = require('fs-readfile-promise');
 const Handlebars = require('handlebars');
+Handlebars.registerHelper('voteChart', require('./templates/helpers/voteChart'));
+Handlebars.registerHelper('listNames', require('./templates/helpers/listNames'));
 const Promise = require('bluebird');
 
 
@@ -391,8 +393,6 @@ exports.listVotesHandler = function listVotesHandler(command) {
 	}).then((buffer) => {
 		const source = buffer.toString();
 		const template = Handlebars.compile(source);
-		
-		Handlebars.registerHelper('voteChart', require('./templates/helpers/voteChart'));
 		
 		const output = template(data);
 		internals.browser.createPost(command.post.topic_id, command.post.post_number, output, () => 0);
