@@ -4,13 +4,13 @@
   <tr>
   <td>{{voteChart percent}}</td>
   <td><b>{{target}} ({{num}})</b>:</td>
-  <td>{{#each names}}<b>{{#if retracted}}<s>{{/if}}{{voter}}{{#if retracted}}</s>{{/if}},{{/each}}
+  <td>{{listNames names}}</td>
   </tr>
   {{/each}}
   <tr>
   <td></td>
   <td>Not Voting ({{numNotVoting}}):</td>
-  <td>{{#each notVoting}}{{this}},{{/each}}</td>
+  <td>{{listNames notVoting}}</td>
   </tr>
   </table>
   
