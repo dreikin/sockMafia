@@ -372,6 +372,9 @@ describe('mafia', () => {
 			sandbox.stub(mafiaDAO, 'getPlayers').resolves(players);
 			
 			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: []
+			};
 
 			return mafia.listAllPlayersHandler(command).then(() => {
 				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
