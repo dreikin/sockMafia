@@ -258,7 +258,61 @@ exports.killHandler = function killHandler(command) {
 		});
 };
 
-exports.dayHandler = function dayHandler(command) {};
+exports.dayHandler = function dayHandler(command) {
+	const gameName = command.args[0];
+	const mod = command.post.username.toLowerCase();
+	let game;
+	const data = {
+		numPlayers: 0,
+		toExecute: 0,
+		day: 0,
+		names: []
+	};
+	
+	return dao.getGameID(gameName).then((id) => {
+		if (!id) {
+			return Promise.reject('No such game');
+		}
+		game = id;
+		return dao.ensureGameExists(game);
+	})
+	.then(() => dao.isPlayerMod(game, mod))
+	.then((isMod) => {
+		if (!isMod) {
+			return Promise.reject('Poster is not mod');
+		}
+		return dao.incrementDay(game);
+	}).then( (newDay) => {
+		data.day = newDay;
+		const text = 'Incremented day for ' + gameName;
+		internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+		return dao.setDayState(game, 'night');
+	}).then(() => {
+		return dao.getNumToLynch(game);
+	}).then( (num) => {
+		data.toExecute = num;
+		return dao.getLivingPlayers(game);
+	}).then( (rows) => {
+		const players = rows.map((row) => {
+			return row.player.name;
+		});
+	
+		data.numPlayers = players.length;
+		return readFile(__dirname + '/templates/voteTemplate.handlebars');
+	}).then((buffer) => {
+		const source = buffer.toString();
+		const template = Handlebars.compile(source);
+		
+		const output = template(data);
+		internals.browser.createPost(game, command.post.post_number, output, () => 0);
+	});
+};
+
+exports.activateHandler = function dayHandler(command) {
+	const gameName = command.args[0];
+	
+	
+};
 
 exports.listVotesHandler = function listVotesHandler(command) {
 	const data = {

@@ -248,26 +248,26 @@ module.exports = {
 	fakeGetAllVotesForDay: function(game, day) {
 		/*TODO: This is a stub. Expected format for return is an array of instances*/
 		const fakeData = [
-			 {
-				"id": 1,
-				"post": 620,
-				"day": 0,
-				"createdAt": "2016-01-03T00:08:10.822Z",
-				"updatedAt": "2016-01-03T00:08:10.822Z",
-				"voterId": 1,
-				"targetId": 2,
-				"gameId": 52778,
-				"voter": {
-					"id": 1,
-					"name": "dreikin",
-					"createdAt": "2016-01-03T00:50:33.808Z",
-					"updatedAt": "2016-01-03T00:50:33.808Z"
+			{
+				'id': 1,
+				'post': 620,
+				'day': 0,
+				'createdAt': '2016-01-03T00:08:10.822Z',
+				'updatedAt': '2016-01-03T00:08:10.822Z',
+				'voterId': 1,
+				'targetId': 2,
+				'gameId': 52778,
+				'voter': {
+					'id': 1,
+					'name': 'dreikin',
+					'createdAt': '2016-01-03T00:50:33.808Z',
+					'updatedAt': '2016-01-03T00:50:33.808Z'
 				},
-				"target": {
-					"id": 2,
-					"name": "yamikuronue",
-					"createdAt": "2016-01-03T00:50:34.848Z",
-					"updatedAt": "2016-01-03T00:50:34.848Z"
+				'target': {
+					'id': 2,
+					'name': 'yamikuronue',
+					'createdAt': '2016-01-03T00:50:34.848Z',
+					'updatedAt': '2016-01-03T00:50:34.848Z'
 				}
 			}
 		];
@@ -313,5 +313,10 @@ module.exports = {
 	setDayState: function(game, state) {
 		/*TODO: This is a stub*/
 		return Promise.resolve();
+	},
+	
+	incrementDay: function(game, state) {
+		/*TODO: This is a stub*/
+		return Promise.resolve(2); //will be the new day number
 	}
 };
