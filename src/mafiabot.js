@@ -16,6 +16,8 @@ Handlebars.registerHelper('voteChart', require('./templates/helpers/voteChart'))
 Handlebars.registerHelper('listNames', require('./templates/helpers/listNames'));
 const Promise = require('bluebird');
 
+const unvoteNicks = ['unvote', 'no-lynch', 'nolynch'];
+
 /*Fisher-Yates, from SO*/
 function shuffle(array) {
   let currentIndex = array.length, temporaryValue, randomIndex;
@@ -119,13 +121,13 @@ exports.voteHandler = function voteHandler(command) {
 			return dao.isPlayerInGame(game, target);
 		})
 		.then((inGame) => {
-			if (!inGame) {
+			if (!inGame && !unvoteNicks.contains(target)) {
 				return Promise.reject('Target not in game');
 			}
 			return dao.isPlayerAlive(game, target);
 		})
 		.then((isAlive) => {
-			if (!isAlive) {
+			if (!isAlive && !unvoteNicks.contains(target)) {
 				return Promise.reject('Target not alive');
 			}
 			return dao.addVote(game, post, voter, target);
@@ -377,7 +379,7 @@ exports.listVotesHandler = function listVotesHandler(command) {
 			const votee = row.target.name;
 			const voter = row.voter.name;
 			
-			if (votee === 'nolynch' || votee === 'unvote') {
+			if (unvoteNicks.contains(votee)) {
 				return; //Never count votes for NoLynch, that's an attempt to unvote
 			}
 			
