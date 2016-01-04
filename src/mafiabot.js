@@ -18,6 +18,10 @@ const Promise = require('bluebird');
 
 const unvoteNicks = ['unvote', 'no-lynch', 'nolynch'];
 
+Array.prototype.contains = function(element){
+    return this.indexOf(element) > -1;
+};
+
 /*Fisher-Yates, from SO*/
 function shuffle(array) {
   let currentIndex = array.length, temporaryValue, randomIndex;
