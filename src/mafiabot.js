@@ -18,9 +18,11 @@ const Promise = require('bluebird');
 
 const unvoteNicks = ['unvote', 'no-lynch', 'nolynch'];
 
+/*eslint-disable no-extend-native*/
 Array.prototype.contains = function(element){
     return this.indexOf(element) > -1;
 };
+/*eslint-enable no-extend-native*/
 
 /*Fisher-Yates, from SO*/
 function shuffle(array) {
@@ -140,8 +142,15 @@ exports.voteHandler = function voteHandler(command) {
 			if (!result) {
 				return Promise.reject('Vote failed');
 			}
-			const text = '@' + command.post.username + ' voted for @' + target
-				+ ' in post #<a href="https://what.thedailywtf.com/t/'
+			let text;
+			
+			if (unvoteNicks.contains(target)) {
+				text = '@' + command.post.username + ' rescinded their vote';
+			} else {
+				text = '@' + command.post.username + ' voted for @' + target;
+			}
+			
+			text = text	+ ' in post #<a href="https://what.thedailywtf.com/t/'
 				+ command.post.topic_id + '/' + command.post.post_number + '">'
 				+ command.post.post_number + '</a>.\n\n'
 				+ 'Vote text:\n[quote]\n' + command.input + '\n[/quote]';
