@@ -154,8 +154,8 @@ exports.voteHandler = function voteHandler(command) {
 				+ command.post.topic_id + '/' + command.post.post_number + '">'
 				+ command.post.post_number + '</a>.\n\n'
 				+ 'Vote text:\n[quote]\n' + command.input + '\n[/quote]';
-			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
-			return Promise.resolve();
+			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);			
+			return dao.getNumToLynch(game);
 		}).then((num) => {
 			/*Execution handler*/
 			return dao.getNumVotesForPlayer(game, target).then((numVotes) => {
@@ -203,8 +203,6 @@ exports.voteHandler = function voteHandler(command) {
 				+ ', topic:' + command.post.topic_id + '"]\n'
 				+ command.input + '\n[/quote]';
 			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
-			
-			return dao.getNumToLynch(game);
 		});
 };
 
@@ -622,7 +620,7 @@ exports.prepare = function prepare(plugConfig, config, events, browser) {
 				return Promise.reject('Game not created');
 			}
 		})
-		.then(() => registerPlayers(plugConfig.thread, plugConfig.players));
+		.then(() => registerPlayers(plugConfig.thread, plugConfig.players.concat(unvoteNicks)));
 	events.onNotification('mentioned', exports.mentionHandler);
 	registerCommands(events);
 };
