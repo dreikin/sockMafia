@@ -175,7 +175,8 @@ exports.voteHandler = function voteHandler(command) {
 			return dao.getNumVotesForPlayer(game, target);
 		}).then((numVotes) => {
 			if (numToLynch >= numVotes && !unvoteNicks.contains(target)) {
-				return lynchPlayer(game, target);
+				//return lynchPlayer(game, target); //Fuck it, this is glitchy as hell
+				return Promise.resolve();
 			} else {
 				return Promise.resolve();
 			}
