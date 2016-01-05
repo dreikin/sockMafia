@@ -106,11 +106,24 @@ exports.echoHandler = function echoHandler(command) {
 	internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
 };
 
+function lynchPlayer(game, target) {
+	return dao.killPlayer(game, target).then(() => {
+		return dao.setDayState(game, 'night');
+	}).then(() => {
+		const text = '@' + target + ' has been lynched! Stay tuned for the flip. <b>It is now Night</b>';
+		internals.browser.createPost(game, null, text, () => 0);
+	}).catch((error) => {
+		const text = 'Error when lynching dead player: ' + error.toString();
+		internals.browser.createPost(game, null, text, () => 0);
+	});
+};
+
 exports.voteHandler = function voteHandler(command) {
 	const game = command.post.topic_id;
 	const post = command.post.post_number;
 	const voter = command.post.username.toLowerCase();
 	const target = command.args[0].toLowerCase().replace(/^@?(.*)/, '$1');
+	let numToLynch;
 
 	return dao.ensureGameExists(game)
 		.then(() => dao.isPlayerInGame(game, voter))
@@ -158,21 +171,15 @@ exports.voteHandler = function voteHandler(command) {
 			return dao.getNumToLynch(game);
 		}).then((num) => {
 			/*Execution handler*/
-			return dao.getNumVotesForPlayer(game, target).then((numVotes) => {
-				if (num >= numVotes) {
-					dao.killPlayer(game, target).then(() => {
-						return dao.setDayState(game, 'night');
-					}).then(() => {
-						const text = '@' + target + ' has been lynched! Stay tuned for the flip. <b>It is now Night</b>';
-						internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
-					}).catch((error) => {
-						const text = 'Error when lynching dead player: ' + error.toString();
-						internals.browser.createPost(game, null, text, () => 0);
-					});
-				}
-			});
-		})
-		.catch((reason) => {
+			numToLynch = num;
+			return dao.getNumVotesForPlayer(game, target);
+		}).then((numVotes) => {
+			if (numToLynch >= numVotes && !unvoteNicks.contains(target)) {
+				return lynchPlayer(game, target);
+			} else {
+				return Promise.resolve();
+			}
+		}).catch((reason) => {
 			let text = ':wtf:';
 
 			if (reason === 'Voter not in game') {
