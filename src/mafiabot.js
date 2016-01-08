@@ -584,7 +584,7 @@ exports.voteHandler = function (command) {
 		}).then((num) => {
 			/*Execution handler*/
 			numToLynch = num;
-			return dao.getNumVotesForPlayer(game, target);
+			return dao.getCurrentDay(game).then((day) => dao.getNumVotesForPlayer(game, day, target));
 		}).then((numVotes) => {
 			if (numToLynch >= numVotes && !unvoteNicks.contains(target)) {
 				//return lynchPlayer(game, target); //Fuck it, this is glitchy as hell

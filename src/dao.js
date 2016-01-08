@@ -552,7 +552,7 @@ module.exports = {
 
 				return votes;
 			},
-			{old: [], current: {}} // Initial value.
+			{old: [], current: new Map()} // Initial value.
 		);
 	},
 
@@ -584,7 +584,7 @@ module.exports = {
 			return Promise.map(
 				module.exports.getCurrentVotes(game, day),
 				(vote) => {
-					return vote.target.id === playerInstance.id ? 1 : 0;
+					return vote[1].target.id === playerInstance.id ? 1 : 0;
 			}).reduce(
 				(sum, vote) => {
 					return sum + vote;
