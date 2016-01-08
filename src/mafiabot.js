@@ -108,7 +108,7 @@ exports.echoHandler = function echoHandler(command) {
 
 function lynchPlayer(game, target) {
 	return dao.killPlayer(game, target).then(() => {
-		return dao.setDayState(game, 'night');
+		return dao.setDayState(game, dao.gameTime.night);
 	}).then(() => {
 		const text = '@' + target + ' has been lynched! Stay tuned for the flip. <b>It is now Night</b>';
 		internals.browser.createPost(game, null, text, () => 0);
@@ -225,11 +225,11 @@ exports.startHandler = function startHandler(command) {
 									'Error when starting game: ' + error, () => 0);
 	};
 	
-	return dao.createGame(id, gameName, player)
+	return dao.addGame(id, gameName, player)
 	.then(() => {
 		internals.browser.createPost(command.post.topic_id,
-											command.post.post_number,
-											'Game ' + gameName + 'created! The  mod is @' + player, () => 0);
+									command.post.post_number,
+									'Game ' + gameName + 'created! The  mod is @' + player, () => 0);
 	})
 	.catch((err) => {
 		reportError(err);
@@ -332,7 +332,7 @@ exports.dayHandler = function dayHandler(command) {
 		data.day = newDay;
 		const text = 'Incremented day for ' + gameName;
 		internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
-		return dao.setDayState(game, 'night');
+		return dao.setDayState(game, dao.gameTime.night);
 	}).then(() => {
 		return dao.getNumToLynch(game);
 	}).then( (num) => {
@@ -460,7 +460,7 @@ exports.listPlayersHandler = function listPlayersHandler(command) {
 			let alive = [];
 
 			rows.forEach((row) => {
-				if (row.player_status === 'alive') {
+				if (row.player_status === dao.playerStatus.alive) {
 					alive.push(row.player.name);
 				}
 			});
@@ -508,9 +508,9 @@ exports.listAllPlayersHandler = function listAllPlayersHandler(command) {
 		let dead = [];
 
 		rows.forEach((row) => {
-			if (row.player_status === 'alive') {
+			if (row.player_status === dao.playerStatus.alive) {
 				alive.push(row.player.name);
-			} else if (row.player_status === 'dead') {
+			} else if (row.player_status === dao.playerStatus.dead) {
 				dead.push(row.player.name);
 			}
 		});
@@ -621,7 +621,7 @@ exports.prepare = function prepare(plugConfig, config, events, browser) {
 		.then(() => dao.ensureGameExists(plugConfig.thread))
 		.catch((reason) => {
 			if (reason === 'Game does not exist') {
-				return dao.createGame(plugConfig.thread, plugConfig.name);
+				return dao.addGame(plugConfig.thread, plugConfig.name);
 			} else {
 				console.log('Mafia: Error: Game not added to database.\n'
 					+ '\tReason: ' + reason);

@@ -90,6 +90,36 @@ function initialise(config) {
 /*eslint-enable no-console*/
 
 module.exports = {
+	/* Enums */
+
+	playerStatus: {
+		alive: 'alive',
+		dead: 'dead',
+		undead: 'undead',
+		unvote: 'unvote',
+		nolynch: 'nolynch',
+		mod: 'mod',
+		spectator: 'spectator',
+		other: 'other'
+	},
+
+	gameTime: {
+		morning: 'morning',
+		day: 'day',
+		evening: 'evening',
+		night: 'night'
+	},
+
+	gameStatus: {
+		prep: 'prep',
+		running: 'running',
+		paused: 'paused',
+		abandoned: 'abandoned',
+		finished: 'finished'
+	},
+
+	/* Database functions */
+
 	createDB: function(config) {
 		if (!initialised) {
 			return initialise(config);
@@ -97,7 +127,20 @@ module.exports = {
 			return Promise.resolve();
 		}
 	},
-	
+
+	/* Game functions */
+
+	addGame: function(id, name, mod) {
+		return Models.games.build({
+			id: id,
+			name: name,
+			status: module.gameStatus.prep,
+			stage: module.gameTime.day,
+			currentDay: 0
+			/*TODO: Join to Players for game owner.*/
+		}).save();
+	},
+
 	getGameID(gameName) {
 		return Models.games.findOne({where: {name: gameName}}).then((result) => {
 			return result.id;
@@ -113,18 +156,44 @@ module.exports = {
 			}
 		});
 	},
-	
-	createGame: function(id, name, mod) {
-		return Models.games.build({
-				id: id,
-				name: name,
-				status: 'prep',
-				stage: 'day',
-				currentDay: 0
-				/*TODO: Join to Players for game owner.*/
-		}).save();
+
+	getCurrentDay: function(game) {
+		return Models.games.findOne({where: {id: game}})
+			.then((gameInstance) => {
+				return gameInstance.currentDay;
+			});
 	},
-	
+
+	setGameState: function(game, state) {
+		return Models.games.findOne({where: {id: game}})
+			.then((gameInstance) => {
+				gameInstance.status = state;
+				return gameInstance.save();
+			});
+	},
+
+	setDayState: function(game, stage) {
+		return Models.games.findOne({where: {id: game}})
+			.then((gameInstance) => {
+				gameInstance.stage = stage;
+				return gameInstance.save();
+			});
+	},
+
+	incrementDay: function(game) {
+		let newDay;
+		return Models.games.findOne({where: {id: game}})
+			.then((gameInstance) => {
+				newDay = gameInstance.currentDay++;
+				gameInstance.stage = module.gameTime.day;
+				return gameInstance.save();
+			}).then( () => {
+				return newDay;
+			});
+	},
+
+	/* Player functions */
+
 	isPlayerMod(player, game) {
 		//For testing purposes, and until the above is resolved, everyone is the mod
 		return Promise.resolve(true);
@@ -164,7 +233,7 @@ module.exports = {
 		let insPlayer;
 		return Models.players.findOrCreate({where: {name: '' + player}}).then((playerInstance) => {
 			insPlayer = playerInstance[0];
-			return Models.roster.findOrCreate({where: {playerId: insPlayer.id, gameId: game, player_status: 'alive'}});
+			return Models.roster.findOrCreate({where: {playerId: insPlayer.id, gameId: game, player_status: module.playerStatus.alive}});
 		}).then(db.sync());
 	},
 	
@@ -177,10 +246,20 @@ module.exports = {
 			insPlayer = playerInstance;
 			return Models.roster.findOne({where: {playerId: insPlayer.id, gameId: game}});
 		}).then((rosterInstance) => {
-			rosterInstance.player_status = 'dead';
+			rosterInstance.player_status = module.playerStatus.dead;
 			return rosterInstance.save();
 		});
 	},
+
+	getPlayers: function(game) {
+		return Models.roster.findAll({where: {gameId: game}, include: [Models.players]});
+	},
+
+	getLivingPlayers: function(game) {
+		return Models.roster.findAll({where: {gameId: game, player_status: module.playerStatus.alive}, include: [Models.players]});
+	},
+
+	/* Vote functions */
 
 	addVote: function(game, post, voter, target) {
 		let voterInstance, targetInstance;
@@ -223,14 +302,6 @@ module.exports = {
 			});
 		});
 	},
-
-	getPlayers: function(game) {
-		return Models.roster.findAll({where: {gameId: game}, include: [Models.players]});
-	},
-	
-	getLivingPlayers: function(game) {
-		return Models.roster.findAll({where: {gameId: game, player_status: 'alive'}, include: [Models.players]});
-	},
 	
 	getNumToLynch: function(game) {
 		return module.exports.getLivingPlayers(game).then((players) => {
@@ -245,43 +316,6 @@ module.exports = {
 	getNumVotesForPlayer: function(game, day, player) {
 		return Promise.resolve(0);
 		/*TODO: This is a stub because I don't understand how Dreikin wants to handle current vs old votes*/
-	},
-	
-	getCurrentDay: function(game) {
-		return Models.games.findOne({where: {id: game}})
-		.then((gameInstance) => {
-			return gameInstance.currentDay;
-		});
-	},
-	
-	fakeGetAllVotesForDay: function(game, day) {
-		/*TODO: This is a stub. Expected format for return is an array of instances*/
-		const fakeData = [
-			{
-				'id': 1,
-				'post': 620,
-				'day': 0,
-				'createdAt': '2016-01-03T00:08:10.822Z',
-				'updatedAt': '2016-01-03T00:08:10.822Z',
-				'voterId': 1,
-				'targetId': 2,
-				'gameId': 52778,
-				'voter': {
-					'id': 1,
-					'name': 'dreikin',
-					'createdAt': '2016-01-03T00:50:33.808Z',
-					'updatedAt': '2016-01-03T00:50:33.808Z'
-				},
-				'target': {
-					'id': 2,
-					'name': 'yamikuronue',
-					'createdAt': '2016-01-03T00:50:34.848Z',
-					'updatedAt': '2016-01-03T00:50:34.848Z'
-				}
-			}
-		];
-		
-		return Promise.resolve(fakeData);
 	},
 
 	getAllVotesForDay: function(game, day) {
@@ -317,33 +351,5 @@ module.exports = {
 			},
 			{old: [], current: []}
 		);
-	},
-	
-	setGameState: function(game, state) {
-		return Models.games.findOne({where: {id: game}})
-		.then((gameInstance) => {
-			gameInstance.status = state;
-			return gameInstance.save();
-		});
-	},
-	
-	setDayState: function(game, stage) {
-		return Models.games.findOne({where: {id: game}})
-		.then((gameInstance) => {
-			gameInstance.stage = stage;
-			return gameInstance.save();
-		});
-	},
-	
-	incrementDay: function(game) {
-		let newDay;
-		return Models.games.findOne({where: {id: game}})
-		.then((gameInstance) => {
-			newDay = gameInstance.currentDay++;
-			gameInstance.stage = 'day';
-			return gameInstance.save();
-		}).then( () => {
-			return newDay;
-		});
 	}
 };
