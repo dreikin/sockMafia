@@ -556,13 +556,20 @@ module.exports = {
 	},
 
 	getPlayersWithoutActiveVotes: function(game, day) {
-		return Promise.join(
-			module.getCurrentVotes(game, day),
-			module.getLivingPlayers(game),
-			(votes, players) => {
-
-			}
-		);
+		return module.getCurrentVotes(game, day).then((votes) => {
+			return Promise.filter(
+				module.getLivingPlayers(game),
+				(entry) => {
+					if (votes.has(entry.player.id)) {
+						/* Player has a current vote */
+						return votes.get(entry.player.id).target.name === module.playerStatus.unvote;
+					} else {
+						/* Player hasn't voted */
+						return true;
+					}
+				}
+			);
+		});
 	},
 	
 	getNumVotesForPlayer: function(game, day, player) {
@@ -573,7 +580,7 @@ module.exports = {
 					return vote.target.id === playerInstance.id ? 1 : 0;
 			}).reduce(
 				(sum, vote) => {
-					return sum += vote;
+					return sum + vote;
 				},
 				0 // Initial value.
 			);
@@ -581,12 +588,14 @@ module.exports = {
 	},
 
 	hasPlayerVotedToday: function(game, player) {
-		db.query('SELECT id FROM `votes` INNER JOIN players ON players.id = votes.playerId WHERE players.name="' + player + '" and gameId=' + game, {type: db.QueryTypes.SELECT})
-			.then(function(rows) {
-				return rows.length > 0;
+		return module.getPlayerByName(player).then((playerInstance) => {
+			return Models.votes.findOne({
+				where: {
+					playerId: playerInstance.id
+				}
 			});
-		/*return Models.roster.findOne({where: {playerId: player, gameID: game}}).then((playerInstance) => {
-		 return playerInstance !== null;
-		 });*/
+		}).then((vote) => {
+			return vote !== null;
+		});
 	}
 };
