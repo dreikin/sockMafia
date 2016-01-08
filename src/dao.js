@@ -5,6 +5,8 @@
 const orm = require('sequelize');
 const Models = {};
 
+// Database initialization
+
 let initialised = false;
 let db;
 
@@ -89,8 +91,10 @@ function initialise(config) {
 }
 /*eslint-enable no-console*/
 
+// Exported objects and functions.
+
 module.exports = {
-	/* Enums */
+	// Enums
 
 	playerStatus: {
 		alive: 'alive',
@@ -118,7 +122,7 @@ module.exports = {
 		finished: 'finished'
 	},
 
-	/* Database functions */
+	// Database functions
 
 	createDB: function(config) {
 		if (!initialised) {
@@ -128,7 +132,7 @@ module.exports = {
 		}
 	},
 
-	/* Game functions */
+	// Game functions (general)
 
 	addGame: function(id, name, mod) {
 		return Models.games.build({
@@ -141,12 +145,6 @@ module.exports = {
 		}).save();
 	},
 
-	getGameID(gameName) {
-		return Models.games.findOne({where: {name: gameName}}).then((result) => {
-			return result.id;
-		});
-	},
-
 	ensureGameExists: function(id) {
 		return Models.games.findOne({where: {id: id}}).then((result) => {
 			if (result) {
@@ -157,11 +155,10 @@ module.exports = {
 		});
 	},
 
-	getCurrentDay: function(game) {
-		return Models.games.findOne({where: {id: game}})
-			.then((gameInstance) => {
-				return gameInstance.currentDay;
-			});
+	getGameID(gameName) {
+		return Models.games.findOne({where: {name: gameName}}).then((result) => {
+			return result.id;
+		});
 	},
 
 	setGameState: function(game, state) {
@@ -172,11 +169,12 @@ module.exports = {
 			});
 	},
 
-	setDayState: function(game, stage) {
+	// Game functions (days)
+
+	getCurrentDay: function(game) {
 		return Models.games.findOne({where: {id: game}})
 			.then((gameInstance) => {
-				gameInstance.stage = stage;
-				return gameInstance.save();
+				return gameInstance.currentDay;
 			});
 	},
 
@@ -192,42 +190,15 @@ module.exports = {
 			});
 	},
 
-	/* Player functions */
-
-	isPlayerMod(player, game) {
-		//For testing purposes, and until the above is resolved, everyone is the mod
-		return Promise.resolve(true);
-	},
-
-	isPlayerInGame: function(game, player) {
-		return Models.players.findOne({where: {name: player}})
-			.then((playerInstance) => {
-				if (playerInstance) {
-					return Models.roster.findOne({where: {playerId: playerInstance.id, gameId: game}});
-				}
-				return null;
-			})
-			.then(function(instance) {
-				return instance !== null;
+	setDayStage: function(game, stage) {
+		return Models.games.findOne({where: {id: game}})
+			.then((gameInstance) => {
+				gameInstance.stage = stage;
+				return gameInstance.save();
 			});
 	},
 
-	isPlayerAlive: function(game, player) {
-		return db.query('SELECT gameId FROM `rosters` INNER JOIN players ON players.id = rosters.playerId WHERE players.name="' + player + '" and gameId=' + game + ' and player_status="alive"', {type: db.QueryTypes.SELECT})
-			.then(function(rows) {
-				return rows.length > 0;
-			});
-	},
-
-	hasPlayerVotedToday: function(game, player) {
-		db.query('SELECT id FROM `votes` INNER JOIN players ON players.id = votes.playerId WHERE players.name="' + player + '" and gameId=' + game, {type: db.QueryTypes.SELECT})
-		.then(function(rows) {
-			return rows.length > 0;
-		});
-		/*return Models.roster.findOne({where: {playerId: player, gameID: game}}).then((playerInstance) => {
-			return playerInstance !== null;
-		});*/
-	},
+	// Player functions
 
 	addPlayerToGame: function(game, player) {
 		let insPlayer;
@@ -251,15 +222,53 @@ module.exports = {
 		});
 	},
 
+	getLivingPlayers: function(game) {
+		return Models.roster.findAll({
+			where: {gameId: game, player_status: module.playerStatus.alive},
+			include: [Models.players]
+		});
+	},
+
 	getPlayers: function(game) {
 		return Models.roster.findAll({where: {gameId: game}, include: [Models.players]});
 	},
 
-	getLivingPlayers: function(game) {
-		return Models.roster.findAll({where: {gameId: game, player_status: module.playerStatus.alive}, include: [Models.players]});
+	hasPlayerVotedToday: function(game, player) {
+		db.query('SELECT id FROM `votes` INNER JOIN players ON players.id = votes.playerId WHERE players.name="' + player + '" and gameId=' + game, {type: db.QueryTypes.SELECT})
+			.then(function(rows) {
+				return rows.length > 0;
+			});
+		/*return Models.roster.findOne({where: {playerId: player, gameID: game}}).then((playerInstance) => {
+		 return playerInstance !== null;
+		 });*/
 	},
 
-	/* Vote functions */
+	isPlayerAlive: function(game, player) {
+		return db.query('SELECT gameId FROM `rosters` INNER JOIN players ON players.id = rosters.playerId WHERE players.name="' + player + '" and gameId=' + game + ' and player_status="alive"', {type: db.QueryTypes.SELECT})
+			.then(function(rows) {
+				return rows.length > 0;
+			});
+	},
+
+	isPlayerInGame: function(game, player) {
+		return Models.players.findOne({where: {name: player}})
+			.then((playerInstance) => {
+				if (playerInstance) {
+					return Models.roster.findOne({where: {playerId: playerInstance.id, gameId: game}});
+				}
+				return null;
+			})
+			.then(function(instance) {
+				return instance !== null;
+			});
+	},
+
+	isPlayerMod(player, game) {
+		//For testing purposes, and until the above is resolved, everyone is the mod
+		return Promise.resolve(true);
+	},
+
+	// Vote functions
 
 	addVote: function(game, post, voter, target) {
 		let voterInstance, targetInstance;
@@ -312,44 +321,44 @@ module.exports = {
 			return num;
 		});
 	},
+
+	getAllVotesForDay: function(game, day) {
+		return Models.votes.findAll({
+				where: {gameId: game, day: day},
+				include: [{model: Models.players, as: 'voter'}, {model: Models.players, as: 'target'}]
+			})
+			.reduce(
+				(votes, vote) => {
+					let idx = -1;
+					for ( let i = 0; i < votes.current.length; i++) {
+						if (votes.current[i].voterId === vote.voterId) {
+							idx = i;
+							break;
+						}
+					}
+					if (idx === -1) {
+						/* no vote by voter yet */
+						votes.current.push(vote);
+					} else {
+						/* need to find latest vote */
+						if (votes.current[idx].post > vote.post) {
+							/* current vote is latest */
+							votes.old.push(vote);
+						} else {
+							/* new vote is latest */
+							votes.old.push(votes.current[idx]);
+							votes.current[idx] = vote;
+						}
+					}
+
+					return votes;
+				},
+				{old: [], current: []}
+			);
+	},
 	
 	getNumVotesForPlayer: function(game, day, player) {
 		return Promise.resolve(0);
 		/*TODO: This is a stub because I don't understand how Dreikin wants to handle current vs old votes*/
-	},
-
-	getAllVotesForDay: function(game, day) {
-		return Models.votes.findAll({
-			where: {gameId: game, day: day},
-			include: [{model: Models.players, as: 'voter'}, {model: Models.players, as: 'target'}]
-		})
-		.reduce(
-			(votes, vote) => {
-				let idx = -1;
-				for ( let i = 0; i < votes.current.length; i++) {
-					if (votes.current[i].voterId === vote.voterId) {
-						idx = i;
-						break;
-					}
-				}
-				if (idx === -1) {
-					/* no vote by voter yet */
-					votes.current.push(vote);
-				} else {
-					/* need to find latest vote */
-					if (votes.current[idx].post > vote.post) {
-						/* current vote is latest */
-						votes.old.push(vote);
-					} else {
-						/* new vote is latest */
-						votes.old.push(votes.current[idx]);
-						votes.current[idx] = vote;
-					}
-				}
-
-				return votes;
-			},
-			{old: [], current: []}
-		);
 	}
 };
