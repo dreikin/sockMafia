@@ -74,7 +74,7 @@ exports.defaultConfig = {
 
 function lynchPlayer(game, target) {
 	return dao.killPlayer(game, target).then(() => {
-		return dao.setDayStage(game, dao.gameTime.night);
+		return dao.setCurrentTime(game, dao.gameTime.night);
 	}).then(() => {
 		const text = '@' + target + ' has been lynched! Stay tuned for the flip. <b>It is now Night</b>';
 		internals.browser.createPost(game, null, text, () => 0);
@@ -174,7 +174,7 @@ exports.dayHandler = function (command) {
 		names: []
 	};
 
-	return dao.getGameID(gameName).then((id) => {
+	return dao.getGameId(gameName).then((id) => {
 			if (!id) {
 				return Promise.reject('No such game');
 			}
@@ -191,7 +191,7 @@ exports.dayHandler = function (command) {
 			data.day = newDay;
 			const text = 'Incremented day for ' + gameName;
 			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
-			return dao.setDayStage(game, dao.gameTime.night);
+			return dao.setCurrentTime(game, dao.gameTime.night);
 		}).then(() => {
 			return dao.getNumToLynch(game);
 		}).then( (num) => {
@@ -259,7 +259,7 @@ exports.killHandler = function (command) {
 	const mod = command.post.username.toLowerCase();
 	let game;
 	
-	return dao.getGameID(gameName)
+	return dao.getGameId(gameName)
 		.then((id) => {
 			if (!id) {
 				return Promise.reject('No such game');
@@ -300,12 +300,12 @@ exports.listPlayersHandler = function (command) {
 			'Error resolving list: ' + error, () => 0);
 	};
 	return dao.ensureGameExists(id)
-		.then(() => dao.getPlayers(id))
+		.then(() => dao.getAllPlayers(id))
 		.then( (rows) => {
 			let alive = [];
 
 			rows.forEach((row) => {
-				if (row.player_status === dao.playerStatus.alive) {
+				if (row.playerStatus === dao.playerStatus.alive) {
 					alive.push(row.player.name);
 				}
 			});
@@ -347,15 +347,15 @@ exports.listAllPlayersHandler = function (command) {
 									'Error resolving list: ' + error, () => 0);
 	};
 	return dao.ensureGameExists(id)
-	.then(() => dao.getPlayers(id))
+	.then(() => dao.getAllPlayers(id))
 	.then( (rows) => {
 		let alive = [];
 		let dead = [];
 
 		rows.forEach((row) => {
-			if (row.player_status === dao.playerStatus.alive) {
+			if (row.playerStatus === dao.playerStatus.alive) {
 				alive.push(row.player.name);
-			} else if (row.player_status === dao.playerStatus.dead) {
+			} else if (row.playerStatus === dao.playerStatus.dead) {
 				dead.push(row.player.name);
 			}
 		});
@@ -420,7 +420,7 @@ exports.listVotesHandler = function (command) {
 			return dao.getNumToLynch(id);
 		}).then((num) => {
 			data.toExecute = num;
-			return dao.getAllVotesForDay(id, data.day);
+			return dao.getAllVotesForDaySorted(id, data.day);
 		}).then((votes) => {
 			const rows = [];
 			votes.old.forEach((vote) => {

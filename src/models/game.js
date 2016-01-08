@@ -17,13 +17,13 @@ module.exports = (db) => {
 			type: orm.TEXT,
 			allowNull: false
 		},
-		// The current stage of the game (morning, day, night, etc.)
-		stage: {
+		// The current time of the game (morning, day, night, etc.)
+		time: {
 			type: orm.TEXT,
 			allowNull: false
 		},
 		//
-		currentDay: {
+		day: {
 			type: orm.INTEGER,
 			allowNull: false
 		},

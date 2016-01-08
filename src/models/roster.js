@@ -12,7 +12,7 @@ module.exports = (db) => {
 			primaryKey: true,
 			autoIncrement: true
 		},
-		player_status: {
+		playerStatus: {
 			type: orm.TEXT,
 			allowNull: false
 		}
