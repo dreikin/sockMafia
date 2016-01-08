@@ -3,6 +3,7 @@
  */
 'use strict';
 const orm = require('sequelize');
+const Promise = require('bluebird');
 const Models = {};
 
 // Database initialization
