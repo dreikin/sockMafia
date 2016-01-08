@@ -148,6 +148,10 @@ module.exports = {
 	 * Derivative functions:
 	 * - ensureGameExists  Return whether a game with a given ID exists.
 	 */
+	/*
+	 * Other functions:
+	 * - getGameID  Get the ID of a game, given its name.
+	 */
 
 	addGame: function(id, name, mod) {
 		return Models.games.build({
@@ -159,6 +163,12 @@ module.exports = {
 			/*TODO: Join to Players for game owner.*/
 		}).save();
 	},
+
+	getGameById: function(id) {},
+
+	getGameByName: function(name) {},
+
+	setGameStatus: function(id, status) {},
 
 	ensureGameExists: function(id) {
 		return Models.games.findOne({where: {id: id}}).then((result) => {
@@ -204,6 +214,18 @@ module.exports = {
 			});
 	},
 
+	getCurrentStage: function(game) {},
+
+	setCurrentDay: function(game, day) {},
+
+	setCurrentStage: function(game, stage) {
+		return Models.games.findOne({where: {id: game}})
+			.then((gameInstance) => {
+				gameInstance.stage = stage;
+				return gameInstance.save();
+			});
+	},
+
 	incrementDay: function(game) {
 		let newDay;
 		return Models.games.findOne({where: {id: game}})
@@ -216,14 +238,6 @@ module.exports = {
 			});
 	},
 
-	setDayStage: function(game, stage) {
-		return Models.games.findOne({where: {id: game}})
-			.then((gameInstance) => {
-				gameInstance.stage = stage;
-				return gameInstance.save();
-			});
-	},
-
 	// Game functions (segments)
 	/*
 	 * Basic functions:
@@ -233,23 +247,27 @@ module.exports = {
 	 * Derivative functions:
 	 */
 
+	addSegment: function() {},
+
 	// Player functions
 	/*
 	 * Basic functions:
 	 * - addPlayer  Add a game player (or spectator, or mod, or something else).
-	 * - getPlayerByID  Get a player by ID.
+	 * - getPlayerById  Get a player by ID.
 	 * - getPlayerByName  Get a player by name.
 	 */
 	/*
 	 * Derivative functions:
 	 */
 
+	addPlayer: function(name) {},
+	getPlayerById: function(id) {},
+	getPlayerByName: function(name) {},
+
 	// Roster functions
 	/*
 	 * Basic functions:
-	 * - addMod  Add a moderator to a game's roster.
-	 * - addPlayerToGame  Add a player to a game's roster.
-	 * - addSpectator  Add a spectator to a game's roster.
+	 * - addPlayerToGame  Add a player to a game's roster.  Defaults to a living player.
 	 * - getAllPlayers  Get all players in a game.
 	 * - getDeadPlayers  Get all dead players in a game.
 	 * - getLivingPlayers  Get all living players in a game.
@@ -261,11 +279,19 @@ module.exports = {
 	 */
 	/*
 	 * Derivative functions:
+	 * - addMod  Add a moderator to a game's roster.
+	 * - addSpectator  Add a spectator to a game's roster.
 	 * - getNumToLynch  Get the number of votes needed to lynch someone (or no-lynch).
 	 * - killPlayer  Set a player's status to dead.
 	 */
+	/*
+	 * Other functions:
+	 * - hasPlayerVotedToday  Check whether a player has voted in the current game-day.
+	 * - isPlayerAlive  Check whether a player is alive in a game.
+	 * - isPlayerMod  Check whether a player is a moderator in a game.
+	 */
 
-	addPlayerToGame: function(game, player) {
+	addPlayerToGame: function(game, player, status = module.playerStatus.alive) {
 		let insPlayer;
 		return Models.players.findOrCreate({where: {name: '' + player}}).then((playerInstance) => {
 			insPlayer = playerInstance[0];
@@ -273,12 +299,43 @@ module.exports = {
 		}).then(db.sync());
 	},
 
+	getAllPlayers: function(game) {
+		return Models.roster.findAll({where: {gameId: game}, include: [Models.players]});
+	},
+
+	getDeadPlayers: function(game) {},
+
 	getLivingPlayers: function(game) {
 		return Models.roster.findAll({
 			where: {gameId: game, player_status: module.playerStatus.alive},
 			include: [Models.players]
 		});
 	},
+
+	getMods: function(game) {},
+
+	getPlayerStatus: function(game, player) {},
+
+	getSpectators: function(game) {},
+
+	isPlayerInGame: function(game, player) {
+		return Models.players.findOne({where: {name: player}})
+			.then((playerInstance) => {
+				if (playerInstance) {
+					return Models.roster.findOne({where: {playerId: playerInstance.id, gameId: game}});
+				}
+				return null;
+			})
+			.then(function(instance) {
+				return instance !== null;
+			});
+	},
+
+	setPlayerStatus: function(game, player, status) {},
+
+	addMod: function(game, mod) {},
+
+	addSpectator: function(game, spectator) {},
 
 	getNumToLynch: function(game) {
 		return module.exports.getLivingPlayers(game).then((players) => {
@@ -290,8 +347,18 @@ module.exports = {
 		});
 	},
 
-	getPlayers: function(game) {
-		return Models.roster.findAll({where: {gameId: game}, include: [Models.players]});
+	killPlayer: function(game, player) {
+		let insPlayer, insRoster;
+		return Models.players.findOne({where: {name: '' + player}}).then((playerInstance) => {
+			if (!playerInstance) {
+				throw new Error('No such player!');
+			}
+			insPlayer = playerInstance;
+			return Models.roster.findOne({where: {playerId: insPlayer.id, gameId: game}});
+		}).then((rosterInstance) => {
+			rosterInstance.player_status = module.playerStatus.dead;
+			return rosterInstance.save();
+		});
 	},
 
 	hasPlayerVotedToday: function(game, player) {
@@ -311,51 +378,28 @@ module.exports = {
 			});
 	},
 
-	isPlayerInGame: function(game, player) {
-		return Models.players.findOne({where: {name: player}})
-			.then((playerInstance) => {
-				if (playerInstance) {
-					return Models.roster.findOne({where: {playerId: playerInstance.id, gameId: game}});
-				}
-				return null;
-			})
-			.then(function(instance) {
-				return instance !== null;
-			});
-	},
-
 	isPlayerMod(player, game) {
 		//For testing purposes, and until the above is resolved, everyone is the mod
 		return Promise.resolve(true);
-	},
-
-	killPlayer: function(game, player) {
-		let insPlayer, insRoster;
-		return Models.players.findOne({where: {name: '' + player}}).then((playerInstance) => {
-			if (!playerInstance) {
-				throw new Error('No such player!');
-			}
-			insPlayer = playerInstance;
-			return Models.roster.findOne({where: {playerId: insPlayer.id, gameId: game}});
-		}).then((rosterInstance) => {
-			rosterInstance.player_status = module.playerStatus.dead;
-			return rosterInstance.save();
-		});
 	},
 
 	// Vote functions
 	/*
 	 * Basic functions:
 	 * - addVote  Add a vote.
-	 * - getAllVotes  Get all votes for a game-day.
+	 * - getAllVotesForDay  Get all votes for a game-day.
 	 */
 	/*
 	 * Derivative functions:
-	 * - getAllVotesSorted  Get all votes for a game-day, sorted into the arrays:
+	 * - getAllVotesForDaySorted  Get all votes for a game-day, sorted into the arrays:
 	 *   - current
 	 *   - old
 	 * - getCurrentVotes  Get all active votes in a game-day.
 	 * - getNotVotingPlayers  Get all players without an active vote in a game-day.
+	 */
+	/*
+	 * Other functions:
+	 * - getNumVotesForPlayer:  Get the number of active votes for a player.
 	 */
 
 	addVote: function(game, post, voter, target) {
@@ -400,7 +444,9 @@ module.exports = {
 		});
 	},
 
-	getAllVotesForDay: function(game, day) {
+	getAllVotesForDay: function(game, day) {},
+
+	getAllVotesForDaySorted: function(game, day) {
 		return Models.votes.findAll({
 				where: {gameId: game, day: day},
 				include: [{model: Models.players, as: 'voter'}, {model: Models.players, as: 'target'}]
@@ -434,6 +480,10 @@ module.exports = {
 				{old: [], current: []}
 			);
 	},
+
+	getCurrentVotes: function(game, day) {},
+
+	getPlayersWithoutActiveVotes: function(game, day) {},
 	
 	getNumVotesForPlayer: function(game, day, player) {
 		return Promise.resolve(0);
