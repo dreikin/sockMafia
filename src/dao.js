@@ -156,8 +156,8 @@ module.exports = {
 		return Models.games.create({
 			id: id,
 			name: name,
-			status: module.gameStatus.prep,
-			time: module.gameTime.day,
+			status: module.exports.gameStatus.prep,
+			time: module.exports.gameTime.day,
 			day: 0
 		});
 	},
@@ -171,7 +171,7 @@ module.exports = {
 	},
 
 	ensureGameExists: function(id) {
-		return module.getGameById(id).then((game) => {
+		return module.exports.getGameById(id).then((game) => {
 			if (game) {
 				return Promise.resolve();
 			} else {
@@ -181,7 +181,7 @@ module.exports = {
 	},
 
 	getGameId(name) {
-		return module.getGameByName(name).then((game) => {
+		return module.exports.getGameByName(name).then((game) => {
 			if (game) {
 				return game.id;
 			} else {
@@ -206,19 +206,19 @@ module.exports = {
 	 */
 
 	getCurrentDay: function(game) {
-		return module.getGameById(game).then((gameInstance) => {
+		return module.exports.getGameById(game).then((gameInstance) => {
 				return gameInstance.day;
 			});
 	},
 
 	getCurrentTime: function(game) {
-		return module.getGameById(game).then((gameInstance) => {
+		return module.exports.getGameById(game).then((gameInstance) => {
 			return gameInstance.time;
 		});
 	},
 
 	getGameStatus: function(game) {
-		return module.getGameById(game).then((gameInstance) => {
+		return module.exports.getGameById(game).then((gameInstance) => {
 			return gameInstance.status;
 		});
 	},
@@ -227,7 +227,7 @@ module.exports = {
 		return Models.games.findOne({where: {id: game}})
 			.then((gameInstance) => {
 				gameInstance.day++;
-				gameInstance.time = module.gameTime.day;
+				gameInstance.time = module.exports.gameTime.day;
 				return gameInstance.save();
 			}).then((gameInstance) => {
 				return gameInstance.day;
@@ -350,9 +350,14 @@ module.exports = {
 	 * - isPlayerMod  Check whether a player is a moderator in a game.
 	 */
 
-	addPlayerToGame: function(game, player, status = module.playerStatus.alive) {
-		return module.addPlayer(player).spread((playerInstance, created) => {
-			return Models.roster.findOrCreate({where: {playerId: playerInstance.id, gameId: game, playerStatus: status}});
+	addPlayerToGame: function(game, player, status = module.exports.playerStatus.alive) {
+		return module.exports.addPlayer(player).spread((playerInstance, created) => {
+			return Models.roster.findOrCreate({
+				where: {
+					playerId: playerInstance.id,
+					gameId: game, playerStatus: status
+				}
+			});
 		}).then(db.sync());
 	},
 
@@ -364,7 +369,7 @@ module.exports = {
 		return Models.roster.findAll({
 			where: {
 				gameId: game,
-				playerStatus: module.playerStatus.dead
+				playerStatus: module.exports.playerStatus.dead
 			},
 			include: [Models.players]
 		});
@@ -374,7 +379,7 @@ module.exports = {
 		return Models.roster.findAll({
 			where: {
 				gameId: game,
-				playerStatus: module.playerStatus.alive
+				playerStatus: module.exports.playerStatus.alive
 			},
 			include: [Models.players]
 		});
@@ -384,14 +389,14 @@ module.exports = {
 		return Models.roster.findAll({
 			where: {
 				gameId: game,
-				playerStatus: module.playerStatus.mod
+				playerStatus: module.exports.playerStatus.mod
 			},
 			include: [Models.players]
 		});
 	},
 
 	getPlayerStatus: function(game, player) {
-		return module.getPlayerByName(player).then((playerInstance) => {
+		return module.exports.getPlayerByName(player).then((playerInstance) => {
 			return Models.roster.findOne({
 				where: {
 					gameId: game,
@@ -407,14 +412,14 @@ module.exports = {
 		return Models.roster.findAll({
 			where: {
 				gameId: game,
-				playerStatus: module.playerStatus.spectator
+				playerStatus: module.exports.playerStatus.spectator
 			},
 			include: [Models.players]
 		});
 	},
 
 	isPlayerInGame: function(game, player) {
-		return module.getPlayerByName(player)
+		return module.exports.getPlayerByName(player)
 			.then((playerInstance) => {
 				if (playerInstance) {
 					return Models.roster.findOne({where: {playerId: playerInstance.id, gameId: game}});
@@ -427,7 +432,7 @@ module.exports = {
 	},
 
 	setPlayerStatus: function(game, player, status) {
-		return module.getPlayerByName(player).then((playerInstance) => {
+		return module.exports.getPlayerByName(player).then((playerInstance) => {
 			return Models.roster.update({
 				playerStatus: status
 			}, {
@@ -440,39 +445,39 @@ module.exports = {
 	},
 
 	addMod: function(game, mod) {
-		return module.addPlayerToGame(game, mod, module.playerStatus.mod);
+		return module.exports.addPlayerToGame(game, mod, module.exports.playerStatus.mod);
 	},
 
 	addSpectator: function(game, spectator) {
-		return module.addPlayerToGame(game, spectator, module.playerStatus.spectator);
+		return module.exports.addPlayerToGame(game, spectator, module.exports.playerStatus.spectator);
 	},
 
 	getNumToLynch: function(game) {
-		return module.getLivingPlayers(game).then((players) => {
+		return module.exports.getLivingPlayers(game).then((players) => {
 			return Math.ceil((players.length + 1) / 2);
 		});
 	},
 
 	killPlayer: function(game, player) {
-		return module.getPlayerByName(player).then((playerInstance) => {
+		return module.exports.getPlayerByName(player).then((playerInstance) => {
 			if (!playerInstance) {
 				return Promise.reject('No such player!');
 			}
-			return module.setPlayerStatus(game, playerInstance.id, module.playerStatus.dead);
+			return module.exports.setPlayerStatus(game, playerInstance.id, module.exports.playerStatus.dead);
 		});
 	},
 
 	isPlayerAlive: function(game, player) {
-		return module.getPlayerStatus(game, player)
+		return module.exports.getPlayerStatus(game, player)
 			.then(function(status) {
-				return status === module.playerStatus.alive;
+				return status === module.exports.playerStatus.alive;
 			});
 	},
 
 	isPlayerMod(player, game) {
-		return module.getPlayerStatus(game, player)
+		return module.exports.getPlayerStatus(game, player)
 			.then(function(status) {
-				return status === module.playerStatus.mod;
+				return status === module.exports.playerStatus.mod;
 			});
 	},
 
@@ -498,9 +503,9 @@ module.exports = {
 
 	addVote: function(game, post, voter, target) {
 		return Promise.join(
-			module.getPlayerByName(voter),
-			module.getPlayerByName(target),
-			module.getGameById(game),
+			module.exports.getPlayerByName(voter),
+			module.exports.getPlayerByName(target),
+			module.exports.getGameById(game),
 			(voterInstance, targetInstance, gameInstance) => {
 				return Models.votes.create({
 					post: post,
@@ -526,7 +531,7 @@ module.exports = {
 	},
 
 	getAllVotesForDaySorted: function(game, day) {
-		return module.getAllVotesForDay(game, day).reduce(
+		return module.exports.getAllVotesForDay(game, day).reduce(
 			(votes, vote) => {
 				if (votes.current.has(vote.voter.id)) {
 					/* There is a current vote by the user */
@@ -550,19 +555,19 @@ module.exports = {
 	},
 
 	getCurrentVotes: function(game, day) {
-		return module.getAllVotesForDaySorted(game, day).then((votes) => {
+		return module.exports.getAllVotesForDaySorted(game, day).then((votes) => {
 			return votes.current;
 		});
 	},
 
 	getPlayersWithoutActiveVotes: function(game, day) {
-		return module.getCurrentVotes(game, day).then((votes) => {
+		return module.exports.getCurrentVotes(game, day).then((votes) => {
 			return Promise.filter(
-				module.getLivingPlayers(game),
+				module.exports.getLivingPlayers(game),
 				(entry) => {
 					if (votes.has(entry.player.id)) {
 						/* Player has a current vote */
-						return votes.get(entry.player.id).target.name === module.playerStatus.unvote;
+						return votes.get(entry.player.id).target.name === module.exports.playerStatus.unvote;
 					} else {
 						/* Player hasn't voted */
 						return true;
@@ -573,9 +578,9 @@ module.exports = {
 	},
 	
 	getNumVotesForPlayer: function(game, day, player) {
-		return module.getPlayerByName(player).then((playerInstance) => {
+		return module.exports.getPlayerByName(player).then((playerInstance) => {
 			return Promise.map(
-				module.getCurrentVotes(game, day),
+				module.exports.getCurrentVotes(game, day),
 				(vote) => {
 					return vote.target.id === playerInstance.id ? 1 : 0;
 			}).reduce(
@@ -588,7 +593,7 @@ module.exports = {
 	},
 
 	hasPlayerVotedToday: function(game, player) {
-		return module.getPlayerByName(player).then((playerInstance) => {
+		return module.exports.getPlayerByName(player).then((playerInstance) => {
 			return Models.votes.findOne({
 				where: {
 					playerId: playerInstance.id
