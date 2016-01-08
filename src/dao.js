@@ -350,7 +350,8 @@ module.exports = {
 	 * - isPlayerMod  Check whether a player is a moderator in a game.
 	 */
 
-	addPlayerToGame: function(game, player, status = module.exports.playerStatus.alive) {
+	addPlayerToGame: function(game, player, status) {
+		status = status || module.exports.playerStatus.alive;
 		return module.exports.addPlayer(player).spread((playerInstance, created) => {
 			return Models.roster.findOrCreate({
 				where: {
