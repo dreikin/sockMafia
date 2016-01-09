@@ -55,6 +55,9 @@ describe('mafia', () => {
 				onCommand: commandSpy,
 				onNotification: notificationSpy
 			};
+			sandbox.stub(mafiaDAO, 'createDB').resolves();
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
+			
 			mafia.prepare(null, fakeConfig, events, undefined);
 			notificationSpy.calledWith('mentioned', mafia.mentionHandler).should.be.true;
 		});
@@ -363,8 +366,8 @@ describe('mafia', () => {
 			};
 			
 			const players = [
-				{player: {'name': 'yamikuronue'}, "playerStatus": 'alive'},
-				{player: {'name': 'accalia'}, "playerStatus": 'dead'}
+				{player: {'name': 'yamikuronue'}, 'playerStatus': 'alive'},
+				{player: {'name': 'accalia'}, 'playerStatus': 'dead'}
 			];
 
 
