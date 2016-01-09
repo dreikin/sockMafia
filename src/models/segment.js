@@ -18,7 +18,7 @@ module.exports = (db) => {
 			allowNull: false
 		},
 		// Stage of the segment
-		stage: {
+		time: {
 			type: orm.TEXT,
 			allowNull: false
 		},

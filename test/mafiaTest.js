@@ -363,13 +363,13 @@ describe('mafia', () => {
 			};
 			
 			const players = [
-				{player: {'name': 'yamikuronue'}, 'player_status': 'alive'},
-				{player: {'name': 'accalia'}, 'player_status': 'dead'}
+				{player: {'name': 'yamikuronue'}, "playerStatus": 'alive'},
+				{player: {'name': 'accalia'}, "playerStatus": 'dead'}
 			];
 
 
 			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
-			sandbox.stub(mafiaDAO, 'getPlayers').resolves(players);
+			sandbox.stub(mafiaDAO, 'getAllPlayers').resolves(players);
 			
 			mafia.internals.browser = browser;
 			mafia.internals.configuration = {

@@ -12,8 +12,14 @@ module.exports = (db) => {
 			primaryKey: true,
 			autoIncrement: true
 		},
-		// Player name
+		// Player name (lower case)
 		name: {
+			type: orm.TEXT,
+			allowNull: false,
+			unique: true
+		},
+		// Player name (proper case)
+		properName: {
 			type: orm.TEXT,
 			allowNull: false,
 			unique: true
