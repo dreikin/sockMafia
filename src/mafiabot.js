@@ -105,6 +105,12 @@ function mustBeFalse(check, args, error) {
 	});
 }
 
+function isDaytime(game) {
+	return dao.getCurrentTime(game).then((time) => {
+		return time === dao.gameTime.day;
+	});
+}
+
 /**
  * Shuffle function using Fisher-Yates algorithm, from SO
  *
@@ -142,6 +148,7 @@ function registerCommands(events) {
 
 	/*Mod commands*/
 	events.onCommand('start', 'Start a new game', exports.startHandler, () => 0);
+	events.onCommand('activate', 'move a game from the prep phase into active play (mod only)', exports.activateHandler, () => 0);
 	events.onCommand('new-day', 'move on to a new day (mod only)', exports.dayHandler, () => 0);
 	events.onCommand('kill', 'kill a player (mod only)', exports.killHandler, () => 0);
 }
@@ -312,7 +319,8 @@ exports.voteHandler = function (command) {
 				mustBeTrue(dao.isPlayerInGame, [game, voter], 'Voter not in game'),
 				mustBeTrue(dao.isPlayerAlive, [game, voter], 'Voter not alive'),
 				mustBeTrue(dao.isPlayerInGame, [game, target], 'Target not in game'),
-				mustBeTrue(dao.isPlayerAlive, [game, target], 'Target not alive')
+				mustBeTrue(dao.isPlayerAlive, [game, target], 'Target not alive'),
+				mustBeTrue(isDaytime, [game], 'It is not day')
 			]);
 		})
 		.then(dao.addVote(game, post, voter, target))
@@ -335,20 +343,34 @@ exports.voteHandler = function (command) {
 			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
 		})
 		.then(() => {
-			Promise.all([
+			Promise.join(
 				dao.getNumToLynch(game),
-				dao.getCurrentDay(game).then((day) => dao.getNumVotesForPlayer(game, day, target))
+				dao.getCurrentDay(game).then((day) => {
+					return dao.getNumVotesForPlayer(game, day, target);
+				}),
+				function (numToLynch, numReceived) {
+					if (numToLynch <= numReceived) {
+						return lynchPlayer(game, target);
+					} else {
+						return Promise.resolve();
+					}
+				}
+			);
+			/*Promise.all([
+				dao.getNumToLynch(game),
+				dao.getCurrentDay(game).then((day) => {
+							return dao.getNumVotesForPlayer(game, day, target);
+						})
 			]).then((results) => {
 				const numToLynch = results[0];
 				const numReceived = results[1];
 			
 				if (numToLynch >= numReceived) {
 					return lynchPlayer(game, target);
-					return Promise.resolve();
 				} else {
 					return Promise.resolve();
 				}
-			});
+			});*/
 		}).catch((reason) => {
 			let text = ':wtf:';
 
@@ -444,7 +466,7 @@ exports.listPlayersHandler = function (command) {
 
 			output += '###Mod(s):\n';
 			if (internals.configuration.mods.length <= 0) {
-				output += 'None.  Weird.';
+				output += 'None. Weird.';
 			} else {
 				internals.configuration.mods.forEach((mod) => {
 					output += '- ' + mod + '\n';
@@ -506,7 +528,7 @@ exports.listAllPlayersHandler = function (command) {
 
 		output += '###Mod(s):\n';
 		if (internals.configuration.mods.length <= 0) {
-			output += 'None.  Weird.';
+			output += 'None. Weird.';
 		} else {
 			internals.configuration.mods.forEach((mod) => {
 				output += '- ' + mod + '\n';
