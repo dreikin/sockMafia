@@ -310,8 +310,8 @@ exports.killHandler = function (command) {
 exports.voteHandler = function (command) {
 	const game = command.post.topic_id;
 	const post = command.post.post_number;
-	const voter = command.post.username.toLowerCase();
-	const target = command.args[0].toLowerCase().replace(/^@?(.*)/, '$1');
+	const voter = command.post.username;
+	const target = command.args[0].replace(/^@?(.*)/, '$1');
 	
 	return dao.ensureGameExists(game)
 		.then(() => {
@@ -330,7 +330,7 @@ exports.voteHandler = function (command) {
 			}
 			let text;
 
-			if (unvoteNicks.contains(target)) {
+			if (unvoteNicks.contains(target.toLowerCase())) {
 				text = '@' + command.post.username + ' rescinded their vote';
 			} else {
 				text = '@' + command.post.username + ' voted for @' + target;
