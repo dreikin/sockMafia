@@ -323,7 +323,7 @@ exports.voteHandler = function (command) {
 				mustBeTrue(isDaytime, [game], 'It is not day')
 			]);
 		})
-		.then(dao.addVote(game, post, voter, target))
+		.then(() => dao.addVote(game, post, voter, target))
 		.then((result) => {
 			if (!result) {
 				return Promise.reject('Vote failed');
@@ -400,6 +400,7 @@ exports.echoHandler = function (command) {
 		+ 'mention: `' + command.mention + '`\n'
 		+ 'post:\n[quote]\n' + command.post.cleaned + '\n[/quote]';
 	internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+	return Promise.resolve();
 };
 
 exports.joinHandler = function (command) {
