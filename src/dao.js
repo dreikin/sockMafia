@@ -527,7 +527,7 @@ module.exports = {
 			.catch(() => false);
 	},
 
-	isPlayerMod(player, game) {
+	isPlayerMod(game, player) {
 		return module.exports.getPlayerStatus(game, player)
 			.then((status) => status === module.exports.playerStatus.mod)
 			.catch(() => false);
