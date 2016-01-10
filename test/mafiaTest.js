@@ -73,7 +73,7 @@ describe('mafia', () => {
 			commandSpy.calledWith('list-players').should.be.true;
 			commandSpy.calledWith('list-votes').should.be.true;
 			commandSpy.calledWith('kill').should.be.true;
-			commandSpy.calledWith('day').should.be.true;
+			commandSpy.calledWith('new-day').should.be.true;
 		});
 	});
 
@@ -1032,7 +1032,7 @@ describe('mafia', () => {
 		});
 	});
 	
-	describe('day()', () => {
+	describe('new-day()', () => {
 		it('Should reject non-mods', () => {
 			const command = {
 				post: {
