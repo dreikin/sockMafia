@@ -211,7 +211,7 @@ exports.prepHandler = function (command) {
 		.then(() => {
 			internals.browser.createPost(command.post.topic_id,
 				command.post.post_number,
-				'Game ' + gameName + 'created! The mod is @' + player, () => 0);
+				'Game "' + gameName + '" created! The mod is @' + player, () => 0);
 		})
 		.catch((err) => {
 			reportError(command, 'Error when starting game: ', err);
