@@ -376,7 +376,7 @@ exports.voteHandler = function (command) {
 			}
 			let text;
 
-			if (unvoteNicks.contains(target.toLowerCase())) {
+			if (target.toLowerCase() === dao.playerStatus.unvote) {
 				text = '@' + command.post.username + ' rescinded their vote';
 			} else {
 				text = '@' + command.post.username + ' voted for @' + target;
@@ -605,8 +605,8 @@ exports.listVotesHandler = function (command) {
 				const votee = row.target.name;
 				const voter = row.voter.name;
 
-				if (unvoteNicks.contains(votee)) {
-					return; //Never count votes for NoLynch, that's an attempt to unvote
+				if (votee === dao.playerStatus.unvote) {
+					return;
 				}
 
 				if (!data.votes.hasOwnProperty(votee)) {
