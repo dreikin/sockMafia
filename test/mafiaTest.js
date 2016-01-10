@@ -55,20 +55,7 @@ describe('mafia', () => {
 		expect(mafia.stop).to.not.throw();
 	});
 
-	describe('prepare()', () => {
-		it('should register notification listener for `mentioned`', () => {
-			const events = {
-				onCommand: commandSpy,
-				onNotification: notificationSpy
-			};
-			sandbox.stub(mafiaDAO, 'createDB').resolves();
-			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
-			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
-			
-			mafia.prepare(null, fakeConfig, events, undefined);
-			notificationSpy.calledWith('mentioned', mafia.mentionHandler).should.be.true;
-		});
-		
+	describe('prepare()', () => {	
 		it('Should register commands', () => {
 			const events = {
 				onCommand: commandSpy,
@@ -83,6 +70,10 @@ describe('mafia', () => {
 			commandSpy.calledWith('for').should.be.true;
 			commandSpy.calledWith('join').should.be.true;
 			commandSpy.calledWith('list-all-players').should.be.true;
+			commandSpy.calledWith('list-players').should.be.true;
+			commandSpy.calledWith('list-votes').should.be.true;
+			commandSpy.calledWith('kill').should.be.true;
+			commandSpy.calledWith('day').should.be.true;
 		});
 	});
 
