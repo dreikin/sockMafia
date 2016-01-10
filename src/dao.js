@@ -526,15 +526,15 @@ module.exports = {
 
 	addVote: function(game, post, voter, target) {
 		return Promise.join(
-			module.exports.getPlayerByName(voter),
-			module.exports.getPlayerByName(target),
+			module.exports.getPlayerInGame(game, voter),
+			module.exports.getPlayerInGame(game, target),
 			module.exports.getGameById(game),
 			(voterInstance, targetInstance, gameInstance) => {
 				return Models.votes.create({
 					post: post,
 					day: gameInstance.day,
-					voterId: voterInstance.id,
-					targetId: targetInstance.id,
+					voterId: voterInstance.playerId,
+					targetId: targetInstance.playerId,
 					gameId: game
 				});
 		});
@@ -601,18 +601,16 @@ module.exports = {
 	},
 	
 	getNumVotesForPlayer: function(game, day, player) {
-		return module.exports.getPlayerByName(player).then((playerInstance) => {
-			return Promise.map(
-				module.exports.getCurrentVotes(game, day),
-				(vote) => {
-					return vote[1].target.id === playerInstance.id ? 1 : 0;
-			}).reduce(
-				(sum, vote) => {
-					return sum + vote;
-				},
-				0 // Initial value.
-			);
-		});
+		return module.exports.getPlayerByName(player)
+			.then((playerInstance) => {
+				return Promise.map(
+					module.exports.getCurrentVotes(game, day),
+					(vote) => vote[1].target.id === playerInstance.id ? 1 : 0
+				).reduce(
+					(sum, vote) => (sum + vote),
+					0 // Initial value.
+				);
+			});
 	},
 
 	hasPlayerVotedToday: function(game, player) {
