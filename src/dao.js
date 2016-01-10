@@ -126,7 +126,8 @@ module.exports = {
 	},
 
 	gameStatus: {
-		prep: 'prep',
+		auto: 'automatic',
+		prep: 'preparing',
 		running: 'running',
 		paused: 'paused',
 		abandoned: 'abandoned',
@@ -151,6 +152,7 @@ module.exports = {
 	/*
 	 * Basic functions:
 	 * - addGame  Add a game to the database.
+	 * - convertAutoToPrep  Convert an automatic game to a proper game in the prep phase.
 	 * - getGameById  Get a game instance by the game's ID.
 	 * - getGameByName  Get a game instance by the game's friendly name.
 	 * - setGameName  Set the human-friendly name of a game.
@@ -165,6 +167,7 @@ module.exports = {
 	 */
 
 	addGame: function(id, name) {
+		name = typeof name !== 'undefined' ? name : '';
 		return Models.games.create({
 			id: id,
 			name: '' + name,
@@ -172,6 +175,13 @@ module.exports = {
 			time: module.exports.gameTime.day,
 			day: 0
 		});
+	},
+
+	convertAutoToPrep: function(id, name) {
+		return module.exports.setGameStatus(id, module.exports.gameStatus.prep)
+			.then(() => module.exports.setGameName(id, name))
+			.then(() => module.exports.setCurrentTime(id, module.exports.gameTime.day))
+			.then(() => module.exports.incrementDay(id));
 	},
 
 	getGameById: function(id) {
@@ -440,7 +450,8 @@ module.exports = {
 					where: {
 						gameId: game,
 						playerId: playerInstance.id
-					}
+					},
+					include: [Models.players]
 				});
 			})
 			.then((rosterInstance) => objectExists(rosterInstance, 'Roster entry for player'));
@@ -489,7 +500,12 @@ module.exports = {
 
 	killPlayer: function(game, player) {
 		return module.exports.getPlayerInGame(game, player)
-			.then((playerInstance) => playerInstance.update({playerStatus: module.exports.playerStatus.dead}));
+			.then((playerInstance) => {
+				if (playerInstance.playerStatus !== module.exports.playerStatus.alive) {
+					return Promise.reject(playerInstance.player.properName + ' is not killable.');
+				}
+				return playerInstance.update({playerStatus: module.exports.playerStatus.dead});
+			});
 	},
 
 	isPlayerAlive: function(game, player) {
