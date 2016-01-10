@@ -155,6 +155,8 @@ function registerCommands(events) {
 	events.onCommand('list-all-votes', 'list all votes from the game\'s start', exports.listAllVotesHandler, () => 0);
 	events.onCommand('list-players', 'list all players still alive', exports.listPlayersHandler, () => 0);
 	events.onCommand('list-votes', 'list all votes from the day\'s start', exports.listVotesHandler, () => 0);
+	events.onCommand('nolynch', 'vote for noone to be lynched', exports.nolynchHandler, () => 0);
+	events.onCommand('unvote', 'rescind your vote', exports.unvoteHandler, () => 0);
 	events.onCommand('vote', 'vote for a player to be executed (alt. form)', exports.voteHandler, () => 0);
 
 	/*Mod commands*/
@@ -335,6 +337,19 @@ exports.finishHandler = function (command) {
 };
 
 // Player commands
+
+exports.nolynchHandler = function (command) {
+	command.input = '!vote for nolynch';
+	command.args[0] = 'nolynch';
+	return exports.voteHandler(command);
+};
+
+exports.unvoteHandler = function (command) {
+	command.input = '!vote for unvote';
+	command.args[0] = 'unvote';
+	return exports.voteHandler(command);
+
+};
 
 exports.voteHandler = function (command) {
 	const game = command.post.topic_id;
