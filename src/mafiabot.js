@@ -460,7 +460,8 @@ exports.listPlayersHandler = function (command) {
 					alive.push(row.player.name);
 				}
 			});
-			alive.filter((name) => {
+
+			alive = alive.filter((name) => {
 				return unvoteNicks.contains(name.toLowerCase()) ? false : true;
 			});
 
@@ -507,7 +508,8 @@ exports.listAllPlayersHandler = function (command) {
 				dead.push(row.player.name);
 			}
 		});
-		alive.filter((name) => {
+
+		alive = alive.filter((name) => {
 			return unvoteNicks.contains(name.toLowerCase()) ? false : true;
 		});
 

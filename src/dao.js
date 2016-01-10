@@ -408,6 +408,14 @@ module.exports = {
 
 	addPlayerToGame: function(game, player, status) {
 		status = typeof status !== 'undefined' ? status : module.exports.playerStatus.alive;
+		const lcPlayer = player.toLowerCase();
+		if (lcPlayer === 'unvote') {
+			status = module.exports.playerStatus.unvote;
+		}
+		if (lcPlayer === 'no-lynch' || lcPlayer === 'nolynch') {
+			status = module.exports.playerStatus.nolynch;
+		}
+
 		return module.exports.getGameById(game)
 			.then(() => module.exports.addPlayer(player))
 			.then((playerInstance) => {
@@ -523,7 +531,11 @@ module.exports = {
 
 	isPlayerAlive: function(game, player) {
 		return module.exports.getPlayerStatus(game, player)
-			.then((status) => status === module.exports.playerStatus.alive)
+			.then((status) => {
+				return (status === module.exports.playerStatus.alive
+					|| status === module.exports.playerStatus.unvote
+					|| status === module.exports.playerStatus.nolynch);
+			})
 			.catch(() => false);
 	},
 
