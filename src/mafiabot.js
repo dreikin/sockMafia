@@ -460,6 +460,9 @@ exports.listPlayersHandler = function (command) {
 					alive.push(row.player.name);
 				}
 			});
+			alive.filter((name) => {
+				return unvoteNicks.contains(name.toLowerCase()) ? false : true;
+			});
 
 			const numLiving = alive.length;
 			alive = shuffle(alive);
@@ -503,6 +506,9 @@ exports.listAllPlayersHandler = function (command) {
 			} else if (row.playerStatus === dao.playerStatus.dead) {
 				dead.push(row.player.name);
 			}
+		});
+		alive.filter((name) => {
+			return unvoteNicks.contains(name.toLowerCase()) ? false : true;
 		});
 
 		const numLiving = alive.length;
