@@ -364,17 +364,18 @@ module.exports = {
 	 * - getDeadPlayers  Get all dead players in a game.
 	 * - getLivingPlayers  Get all living players in a game.
 	 * - getMods  Get all moderators for a game.
-	 * - getPlayerStatus  Get the status of a player in a game.
+	 * - getPlayerInGame  Get a player in a game.
 	 * - getSpectators  Get all spectators of a game.
-	 * - isPlayerInGame  Return whether a player is in a game.
-	 * - setPlayerStatus  Set the status of a player in a game.
 	 */
 	/*
 	 * Derivative functions:
 	 * - addMod  Add a moderator to a game's roster.
 	 * - addSpectator  Add a spectator to a game's roster.
 	 * - getNumToLynch  Get the number of votes needed to lynch someone (or no-lynch).
+	 * - getPlayerStatus  Get the status of a player in a game.
+	 * - isPlayerInGame  Return whether a player is in a game.
 	 * - killPlayer  Set a player's status to dead.
+	 * - setPlayerStatus  Set the status of a player in a game.
 	 */
 	/*
 	 * Other functions:
@@ -384,22 +385,21 @@ module.exports = {
 
 	addPlayerToGame: function(game, player, status) {
 		status = typeof status !== 'undefined' ? status : module.exports.playerStatus.alive;
-		return Promise.join(
-			module.exports.getGameById(game),
-			module.exports.addPlayer(player),
-			function (playerInstance) {
+		return module.exports.getGameById(game)
+			.then(() => module.exports.addPlayer(player))
+			.then((playerInstance) => {
 				return Models.roster.findOrCreate({
 					where: {
 						playerId: playerInstance.id,
-						gameId: game, playerStatus: status
+						gameId: game,
+						playerStatus: status
 					}
 				});
 			});
 	},
 
 	getAllPlayers: function(game) {
-		return module.exports.getGameById(game)
-			.then(Models.roster.findAll({where: {gameId: game}, include: [Models.players]}));
+		return Models.roster.findAll({where: {gameId: game}, include: [Models.players]});
 	},
 
 	getDeadPlayers: function(game) {
@@ -432,17 +432,23 @@ module.exports = {
 		});
 	},
 
+	getPlayerInGame: function(game, player) {
+		return module.exports.getGameById(game)
+			.then(() => module.exports.getPlayerByName(player))
+			.then((playerInstance) => {
+				return Models.roster.findOne({
+					where: {
+						gameId: game,
+						playerId: playerInstance.id
+					}
+				});
+			})
+			.then((rosterInstance) => objectExists(rosterInstance, 'Roster entry for player'));
+	},
+
 	getPlayerStatus: function(game, player) {
-		return module.exports.getPlayerByName(player).then((playerInstance) => {
-			return Models.roster.findOne({
-				where: {
-					gameId: game,
-					playerId: playerInstance.id
-				}
-			}).then((rosterInstance) => {
-				return rosterInstance.playerStatus;
-			});
-		});
+		return module.exports.getPlayerInGame(game, player)
+			.then((rosterInstance) => rosterInstance.playerStatus);
 	},
 
 	getSpectators: function(game) {
@@ -456,29 +462,14 @@ module.exports = {
 	},
 
 	isPlayerInGame: function(game, player) {
-		return module.exports.getPlayerByName(player)
-			.then((playerInstance) => {
-				if (playerInstance) {
-					return Models.roster.findOne({where: {playerId: playerInstance.id, gameId: game}});
-				}
-				return null;
-			})
-			.then(function(instance) {
-				return instance !== null;
-			});
+		return module.exports.getPlayerInGame(game, player)
+			.then((instance) => instance !== null)
+			.catch(() => false);
 	},
 
 	setPlayerStatus: function(game, player, status) {
-		return module.exports.getPlayerByName(player).then((playerInstance) => {
-			return Models.roster.update({
-				playerStatus: status
-			}, {
-				where: {
-					gameId: game,
-					playerId: playerInstance.id
-				}
-			});
-		});
+		return module.exports.getPlayerInGame(game, player)
+			.then((playerInstance) => playerInstance.update({playerStatus: status}));
 	},
 
 	addMod: function(game, mod) {
@@ -490,32 +481,27 @@ module.exports = {
 	},
 
 	getNumToLynch: function(game) {
-		return module.exports.getLivingPlayers(game).then((players) => {
-			return Math.ceil((players.length + 1) / 2);
-		});
+		return module.exports.getLivingPlayers(game)
+			.then((players) => {
+				return Math.ceil((players.length + 1) / 2);
+			});
 	},
 
 	killPlayer: function(game, player) {
-		return module.exports.getPlayerByName(player).then((playerInstance) => {
-			if (!playerInstance) {
-				return Promise.reject('No such player!');
-			}
-			return module.exports.setPlayerStatus(game, playerInstance.id, module.exports.playerStatus.dead);
-		});
+		return module.exports.getPlayerInGame(game, player)
+			.then((playerInstance) => playerInstance.update({playerStatus: module.exports.playerStatus.dead}));
 	},
 
 	isPlayerAlive: function(game, player) {
 		return module.exports.getPlayerStatus(game, player)
-			.then(function(status) {
-				return status === module.exports.playerStatus.alive;
-			});
+			.then((status) => status === module.exports.playerStatus.alive)
+			.catch(() => false);
 	},
 
 	isPlayerMod(player, game) {
 		return module.exports.getPlayerStatus(game, player)
-			.then(function(status) {
-				return status === module.exports.playerStatus.mod;
-			});
+			.then((status) => status === module.exports.playerStatus.mod)
+			.catch(() => false);
 	},
 
 	// Vote functions
