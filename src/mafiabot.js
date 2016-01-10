@@ -88,7 +88,7 @@ function lynchPlayer(game, target) {
 
 
 function mustBeTrue(check, args, error) {
-	return check.apply(args).then((result) => {
+	return check.apply(null, args).then((result) => {
 		if (result) {
 			return Promise.resolve();
 		} else {
@@ -98,7 +98,7 @@ function mustBeTrue(check, args, error) {
 }
 
 function mustBeFalse(check, args, error) {
-	return check.apply(args).then((result) => {
+	return check.apply(null, args).then((result) => {
 		if (!result) {
 			return Promise.resolve();
 		} else {
