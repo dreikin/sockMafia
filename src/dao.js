@@ -152,13 +152,14 @@ module.exports = {
 	/*
 	 * Basic functions:
 	 * - addGame  Add a game to the database.
-	 * - convertAutoToPrep  Convert an automatic game to a proper game in the prep phase.
+	 * - archiveAutoGame  Archive an automatic game in preparation for a normal one.
 	 * - getGameById  Get a game instance by the game's ID.
 	 * - getGameByName  Get a game instance by the game's friendly name.
 	 * - setGameName  Set the human-friendly name of a game.
 	 */
 	/*
 	 * Derivative functions:
+	 * - convertAutoToPrep  Convert an automatic game to a proper game in the prep phase.
 	 * - ensureGameExists  Return whether a game with a given ID exists.
 	 */
 	/*
@@ -167,7 +168,7 @@ module.exports = {
 	 */
 
 	addGame: function(id, name) {
-		name = typeof name !== 'undefined' ? name : '';
+		name = typeof name !== 'undefined' ? name : id;
 		return Models.games.create({
 			id: id,
 			name: '' + name,
@@ -177,11 +178,18 @@ module.exports = {
 		});
 	},
 
-	convertAutoToPrep: function(id, name) {
-		return module.exports.setGameStatus(id, module.exports.gameStatus.prep)
-			.then(() => module.exports.setGameName(id, name))
-			.then(() => module.exports.setCurrentTime(id, module.exports.gameTime.day))
-			.then(() => module.exports.incrementDay(id));
+	archiveAutoGame: function(id) {
+		// Hopefully this cascades to roster, votes, and segments.
+		return orm.transaction((t) => {
+			return Models.games.update({
+				gameId: 0 - id
+			}, {
+				where: {
+					gameId: id
+				},
+				transaction: t
+			});
+		});
 	},
 
 	getGameById: function(id) {
@@ -202,6 +210,11 @@ module.exports = {
 				id: id
 			}
 		});
+	},
+
+	convertAutoToPrep: function(id, name) {
+		return module.exports.archiveAutoGame(id)
+			.then(() => module.exports.addGame(id, name));
 	},
 
 	ensureGameExists: function(id, createGame) {
@@ -268,8 +281,8 @@ module.exports = {
 		return Models.games.findOne({where: {id: game}})
 			.then((gameInstance) => objectExists(gameInstance, 'Game'))
 			.then((gameInstance) => {
-				gameInstance.day++;
-				gameInstance.time = module.exports.gameTime.day;
+				gameInstance.increment('day', {by: 1});
+				gameInstance.time = module.exports.gameTime.morning;
 				return gameInstance.save();
 			}).then((gameInstance) => {
 				return gameInstance.day;
@@ -500,11 +513,11 @@ module.exports = {
 
 	killPlayer: function(game, player) {
 		return module.exports.getPlayerInGame(game, player)
-			.then((playerInstance) => {
-				if (playerInstance.playerStatus !== module.exports.playerStatus.alive) {
-					return Promise.reject(playerInstance.player.properName + ' is not killable.');
+			.then((rosterInstance) => {
+				if (rosterInstance.playerStatus !== module.exports.playerStatus.alive) {
+					return Promise.reject(rosterInstance.player.properName + ' is not killable.');
 				}
-				return playerInstance.update({playerStatus: module.exports.playerStatus.dead});
+				return rosterInstance.update({playerStatus: module.exports.playerStatus.dead});
 			});
 	},
 
