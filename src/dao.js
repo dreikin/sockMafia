@@ -180,7 +180,7 @@ module.exports = {
 
 	archiveAutoGame: function(id) {
 		// Hopefully this cascades to roster, votes, and segments.
-		return orm.transaction((t) => {
+		return db.transaction((t) => {
 			return Models.games.update({
 				gameId: 0 - id
 			}, {
