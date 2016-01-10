@@ -344,7 +344,7 @@ describe('mafia', () => {
 			sandbox.stub(mafiaDAO, 'getNumVotesForPlayer').resolves(4);
 			sandbox.stub(mafiaDAO, 'addVote').resolves(true);
 			
-			sandbox.stub(mafiaDAO, 'killPlayer').resolves();
+			sandbox.stub(mafiaDAO, 'killPlayer').resolves({player: {properName: 'noLunch'}});
 			sandbox.stub(mafiaDAO, 'setCurrentTime').resolves();
 
 			return mafia.voteHandler(command).then(() => {
@@ -353,7 +353,7 @@ describe('mafia', () => {
 				mafiaDAO.setCurrentTime.calledWith(12345, mafiaDAO.gameTime.night).should.be.true;
 
 				const output = browser.createPost.getCall(1).args[2];
-				output.should.include('@noLunch has been lynched! Stay tuned for the flip. <b>It is now Night</b>');
+				output.should.include('@noLunch has been lynched! Stay tuned for the flip. <b>It is now Night.</b>');
 			});
 		});
 
@@ -878,7 +878,8 @@ describe('mafia', () => {
 					'yamikuronue'
 				]
 			};
-			
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
 			sandbox.stub(mafiaDAO, 'getGameId').resolves(1);
 			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(false);
 			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
@@ -910,7 +911,8 @@ describe('mafia', () => {
 					'accalia'
 				]
 			};
-			
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
 			sandbox.stub(mafiaDAO, 'getGameId').resolves(1);
 			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(true);
 			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
@@ -943,7 +945,8 @@ describe('mafia', () => {
 					'RaceProUK'
 				]
 			};
-			
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
 			sandbox.stub(mafiaDAO, 'getGameId').resolves(1);
 			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(true);
 			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(false);
@@ -976,7 +979,8 @@ describe('mafia', () => {
 					'yamikuronue'
 				]
 			};
-			
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
 			sandbox.stub(mafiaDAO, 'getGameId').resolves(1);
 			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(true);
 			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
@@ -1009,7 +1013,8 @@ describe('mafia', () => {
 					'yamikuronue'
 				]
 			};
-			
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
 			sandbox.stub(mafiaDAO, 'getGameId').resolves(1);
 			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(true);
 			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
@@ -1046,7 +1051,8 @@ describe('mafia', () => {
 				{player: {'name': 'accalia'}, 'playerStatus': 'alive'}
 			];
 
-			
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
 			sandbox.stub(mafiaDAO, 'getGameId').resolves(1);
 			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(false);
 			sandbox.stub(mafiaDAO, 'incrementDay').resolves(2);
@@ -1089,7 +1095,8 @@ describe('mafia', () => {
 				{player: {'name': 'accalia'}, 'playerStatus': 'alive'}
 			];
 
-			
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').rejects('Game does not exist');
 			sandbox.stub(mafiaDAO, 'getGameId').rejects('No such game');
 			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(true);
 			sandbox.stub(mafiaDAO, 'incrementDay').resolves(2);
@@ -1111,7 +1118,7 @@ describe('mafia', () => {
 				//Output back to mod
 				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
 				const modOutput = browser.createPost.getCall(0).args[2];
-				modOutput.should.include('Error incrementing day: Error: No such game');
+				modOutput.should.include('Error incrementing day: Game does not exist');
 				
 				//Output to game
 				browser.createPost.calledWith(1, command.post.post_number).should.not.be.true;
@@ -1132,8 +1139,14 @@ describe('mafia', () => {
 				{player: {'name': 'accalia'}, 'playerStatus': 'alive'}
 			];
 
-			
-			sandbox.stub(mafiaDAO, 'getGameId').resolves(69);
+			const game = {
+				day: 2,
+				name: 'testMafia'
+			};
+
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
+			sandbox.stub(mafiaDAO, 'getGameById').resolves(game);
 			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(true);
 			sandbox.stub(mafiaDAO, 'incrementDay').resolves(2);
 			sandbox.stub(mafiaDAO, 'setCurrentTime').resolves();
@@ -1159,7 +1172,7 @@ describe('mafia', () => {
 				modOutput.should.include('Incremented day for testMafia');
 				
 				//Output to game
-				browser.createPost.calledWith(69, command.post.post_number).should.be.true;
+				browser.createPost.calledWith(12345, command.post.post_number).should.be.true;
 				browser.createPost.getCall(1).args[2].should.include('Some string output');
 				
 				fakeTemplate.called.should.be.true;

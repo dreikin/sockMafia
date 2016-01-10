@@ -180,12 +180,12 @@ module.exports = {
 
 	archiveAutoGame: function(id) {
 		// Hopefully this cascades to roster, votes, and segments.
-		return orm.transaction((t) => {
+		return db.transaction((t) => {
 			return Models.games.update({
-				gameId: 0 - id
+				id: 0 - id
 			}, {
 				where: {
-					gameId: id
+					id: id
 				},
 				transaction: t
 			});
@@ -408,6 +408,14 @@ module.exports = {
 
 	addPlayerToGame: function(game, player, status) {
 		status = typeof status !== 'undefined' ? status : module.exports.playerStatus.alive;
+		const lcPlayer = player.toLowerCase();
+		if (lcPlayer === 'unvote') {
+			status = module.exports.playerStatus.unvote;
+		}
+		if (lcPlayer === 'no-lynch' || lcPlayer === 'nolynch') {
+			status = module.exports.playerStatus.nolynch;
+		}
+
 		return module.exports.getGameById(game)
 			.then(() => module.exports.addPlayer(player))
 			.then((playerInstance) => {
@@ -523,11 +531,15 @@ module.exports = {
 
 	isPlayerAlive: function(game, player) {
 		return module.exports.getPlayerStatus(game, player)
-			.then((status) => status === module.exports.playerStatus.alive)
+			.then((status) => {
+				return (status === module.exports.playerStatus.alive
+					|| status === module.exports.playerStatus.unvote
+					|| status === module.exports.playerStatus.nolynch);
+			})
 			.catch(() => false);
 	},
 
-	isPlayerMod(player, game) {
+	isPlayerMod(game, player) {
 		return module.exports.getPlayerStatus(game, player)
 			.then((status) => status === module.exports.playerStatus.mod)
 			.catch(() => false);

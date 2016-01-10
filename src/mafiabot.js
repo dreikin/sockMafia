@@ -88,7 +88,7 @@ function lynchPlayer(game, target) {
 
 
 function mustBeTrue(check, args, error) {
-	return check.apply(args).then((result) => {
+	return check.apply(null, args).then((result) => {
 		if (result) {
 			return Promise.resolve();
 		} else {
@@ -98,7 +98,7 @@ function mustBeTrue(check, args, error) {
 }
 
 function mustBeFalse(check, args, error) {
-	return check.apply(args).then((result) => {
+	return check.apply(null, args).then((result) => {
 		if (!result) {
 			return Promise.resolve();
 		} else {
@@ -155,6 +155,9 @@ function registerCommands(events) {
 	events.onCommand('list-all-votes', 'list all votes from the game\'s start', exports.listAllVotesHandler, () => 0);
 	events.onCommand('list-players', 'list all players still alive', exports.listPlayersHandler, () => 0);
 	events.onCommand('list-votes', 'list all votes from the day\'s start', exports.listVotesHandler, () => 0);
+	events.onCommand('no-lynch', 'vote for noone to be lynched', exports.nolynchHandler, () => 0);
+	events.onCommand('nolynch', 'vote for noone to be lynched', exports.nolynchHandler, () => 0);
+	events.onCommand('unvote', 'rescind your vote', exports.unvoteHandler, () => 0);
 	events.onCommand('vote', 'vote for a player to be executed (alt. form)', exports.voteHandler, () => 0);
 
 	/*Mod commands*/
@@ -211,7 +214,7 @@ exports.prepHandler = function (command) {
 		.then(() => {
 			internals.browser.createPost(command.post.topic_id,
 				command.post.post_number,
-				'Game ' + gameName + 'created! The mod is @' + player, () => 0);
+				'Game "' + gameName + '" created! The mod is @' + player, () => 0);
 		})
 		.catch((err) => {
 			reportError(command, 'Error when starting game: ', err);
@@ -336,13 +339,29 @@ exports.finishHandler = function (command) {
 
 // Player commands
 
+exports.nolynchHandler = function (command) {
+	command.input = '!vote for nolynch';
+	command.args[0] = 'nolynch';
+	return exports.voteHandler(command);
+};
+
+exports.unvoteHandler = function (command) {
+	command.input = '!vote for unvote';
+	command.args[0] = 'unvote';
+	return exports.voteHandler(command);
+
+};
+
 exports.voteHandler = function (command) {
 	const game = command.post.topic_id;
 	const post = command.post.post_number;
 	const voter = command.post.username;
 	// The following regex strips a preceding @ and captures up to either the end of input or one of [.!?, ].
 	// I need to check the rules for names.  The latter part may work just by using `(\w*)` after the `@?`.
-	const target = command.args[0].replace(/^@?(.*?)[.!?, ]?/, '$1');
+	let target = command.args[0].replace(/^@?(.*?)[.!?, ]?/, '$1');
+	if (target.toLowerCase() === 'no-lynch') {
+		target = 'nolynch';
+	}
 	
 	return dao.ensureGameExists(game)
 		.then(() => {
@@ -361,7 +380,7 @@ exports.voteHandler = function (command) {
 			}
 			let text;
 
-			if (unvoteNicks.contains(target.toLowerCase())) {
+			if (target.toLowerCase() === dao.playerStatus.unvote) {
 				text = '@' + command.post.username + ' rescinded their vote';
 			} else {
 				text = '@' + command.post.username + ' voted for @' + target;
@@ -461,6 +480,10 @@ exports.listPlayersHandler = function (command) {
 				}
 			});
 
+			alive = alive.filter((name) => {
+				return unvoteNicks.contains(name.toLowerCase()) ? false : true;
+			});
+
 			const numLiving = alive.length;
 			alive = shuffle(alive);
 
@@ -503,6 +526,10 @@ exports.listAllPlayersHandler = function (command) {
 			} else if (row.playerStatus === dao.playerStatus.dead) {
 				dead.push(row.player.name);
 			}
+		});
+
+		alive = alive.filter((name) => {
+			return unvoteNicks.contains(name.toLowerCase()) ? false : true;
 		});
 
 		const numLiving = alive.length;
@@ -582,8 +609,8 @@ exports.listVotesHandler = function (command) {
 				const votee = row.target.name;
 				const voter = row.voter.name;
 
-				if (unvoteNicks.contains(votee)) {
-					return; //Never count votes for NoLynch, that's an attempt to unvote
+				if (votee === dao.playerStatus.unvote) {
+					return;
 				}
 
 				if (!data.votes.hasOwnProperty(votee)) {
