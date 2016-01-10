@@ -440,24 +440,16 @@ exports.joinHandler = function (command) {
 	const post = command.post.post_number;
 	const player = command.post.username;
 	
-	const reportError = (error) => {
-		internals.browser.createPost(id, post, 'Error when adding to game: ' + error, () => 0);
-	};
-	
 	return dao.ensureGameExists(id)
 		.then(() => mustBeFalse(dao.isPlayerInGame, [id, player], 'You are already in this game, @' + player + '!'))
 		.then(() => dao.addPlayerToGame(id, player.toLowerCase()))
 		.then(() => internals.browser.createPost(id, post, 'Welcome to the game, @' + player, () => 0))
-		.catch(reportError);
+		.catch((err) => reportError(command, 'Error when adding to game: ', err));
 };
 
 exports.listPlayersHandler = function (command) {
 	const id = command.post.topic_id;
-	const reportError = (error) => {
-		internals.browser.createPost(command.post.topic_id,
-			command.post.post_number,
-			'Error resolving list: ' + error, () => 0);
-	};
+
 	return dao.ensureGameExists(id)
 		.then(() => dao.getAllPlayers(id))
 		.then( (rows) => {
@@ -493,18 +485,12 @@ exports.listPlayersHandler = function (command) {
 
 			internals.browser.createPost(command.post.topic_id, command.post.post_number, output, () => 0);
 			return Promise.resolve();
-		}).catch((err) => {
-			reportError(err);
-		});
+		}).catch((err) => reportError(command, 'Error resolving list: ', err));
 };
 
 exports.listAllPlayersHandler = function (command) {
 	const id = command.post.topic_id;
-	const reportError = (error) => {
-		internals.browser.createPost(command.post.topic_id,
-									command.post.post_number,
-									'Error resolving list: ' + error, () => 0);
-	};
+
 	return dao.ensureGameExists(id)
 	.then(() => dao.getAllPlayers(id))
 	.then( (rows) => {
@@ -555,9 +541,7 @@ exports.listAllPlayersHandler = function (command) {
 
 		internals.browser.createPost(command.post.topic_id, command.post.post_number, output, () => 0);
 		return Promise.resolve();
-	}).catch((err) => {
-		reportError(err);
-	});
+	}).catch((err) => reportError(command, 'Error resolving list: ', err));
 };
 
 exports.listVotesHandler = function (command) {
