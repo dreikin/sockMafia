@@ -230,7 +230,7 @@ exports.activateHandler = function (command) {
 
 exports.dayHandler = function (command) {
 	const gameName = internals.configuration.name;
-	const mod = command.post.username.toLowerCase();
+	const mod = command.post.username;
 	let game;
 	const data = {
 		numPlayers: 0,
@@ -240,20 +240,17 @@ exports.dayHandler = function (command) {
 	};
 
 	return dao.getGameId(gameName).then((id) => {
-		if (!id) {
-			return Promise.reject('No such game');
-		}
 		game = id;
 	})
-	.then(mustBeTrue(dao.isPlayerMod, [game, mod], 'Poster is not mod'))
-	.then(dao.incrementDay(game))
+	.then(() => mustBeTrue(dao.isPlayerMod, [game, mod], 'Poster is not mod'))
+	.then(() => dao.incrementDay(game))
 	.then( (newDay) => {
 		data.day = newDay;
 		const text = 'Incremented day for ' + gameName;
 		internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
 		return dao.setCurrentTime(game, dao.gameTime.night);
 	}).then(() => {
-		Promise.all([
+		return Promise.all([
 			dao.getNumToLynch(game),
 			dao.getLivingPlayers(game),
 			readFile(__dirname + '/templates/newDayTemplate.handlebars')
@@ -272,15 +269,18 @@ exports.dayHandler = function (command) {
 			internals.browser.createPost(game, command.post.post_number, output, () => 0);
 		
 		});
-		return ;
-		return ;
+	})
+	.catch((err) => {
+		internals.browser.createPost(command.post.topic_id,
+		command.post.post_number,
+		'Error incrementing day: ' + err, () => 0);
 	});
 };
 
 exports.killHandler = function (command) {
 	const gameName = internals.configuration.name;
-	const target = command.args[0].toLowerCase().replace(/^@?(.*)/, '$1');
-	const mod = command.post.username.toLowerCase();
+	const target = command.args[0].replace(/^@?(.*)/, '$1');
+	const mod = command.post.username;
 	let game;
 	
 	return dao.getGameId(gameName)
@@ -294,7 +294,7 @@ exports.killHandler = function (command) {
 				mustBeTrue(dao.isPlayerAlive, [game, target], 'Target not alive')
 			]);
 		})
-		.then(dao.killPlayer(game, target))
+		.then(() => dao.killPlayer(game, target))
 		.then(() => {
 			const text = 'Killed @' + target + ' in game ' + gameName;
 			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
@@ -616,26 +616,6 @@ exports.listVotesHandler = function (command) {
 
 exports.listAllVotesHandler = function (command) {};
 
-/**
- * Respond to @mentions
- *
- * @param {external.notifications.Notification} _ Notification received (ignored)
- * @param {external.topics.Topic} topic Topic trigger post belongs to
- * @param {external.posts.CleanedPost} post Post that triggered notification
- */
-exports.mentionHandler = function (_, topic, post) {
-	const index = Math.floor(Math.random() * internals.configuration.messages.length),
-		reply = internals.configuration.messages[index].replace(/%(\w+)%/g, (__, key) => {
-			let value = post[key] || '%' + key + '%';
-			if (typeof value !== 'string') {
-				value = JSON.stringify(value);
-			}
-			return value;
-		}).replace(/(^|\W)@(\w+)\b/g, '$1<a class="mention">@&zwj;$2</a>');
-	internals.browser.createPost(topic.id, post.post_number, reply, () => 0);
-};
-
-
 // Required exports
 
 /**
@@ -671,7 +651,6 @@ exports.prepare = function prepare(plugConfig, config, events, browser) {
 			}
 		})
 		.then(() => registerPlayers(plugConfig.thread, plugConfig.players.concat(unvoteNicks)));
-	events.onNotification('mentioned', exports.mentionHandler);
 	registerCommands(events);
 };
 /*eslint-enable no-console*/
