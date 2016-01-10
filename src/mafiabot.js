@@ -155,6 +155,7 @@ function registerCommands(events) {
 	events.onCommand('list-all-votes', 'list all votes from the game\'s start', exports.listAllVotesHandler, () => 0);
 	events.onCommand('list-players', 'list all players still alive', exports.listPlayersHandler, () => 0);
 	events.onCommand('list-votes', 'list all votes from the day\'s start', exports.listVotesHandler, () => 0);
+	events.onCommand('no-lynch', 'vote for noone to be lynched', exports.nolynchHandler, () => 0);
 	events.onCommand('nolynch', 'vote for noone to be lynched', exports.nolynchHandler, () => 0);
 	events.onCommand('unvote', 'rescind your vote', exports.unvoteHandler, () => 0);
 	events.onCommand('vote', 'vote for a player to be executed (alt. form)', exports.voteHandler, () => 0);
@@ -357,7 +358,10 @@ exports.voteHandler = function (command) {
 	const voter = command.post.username;
 	// The following regex strips a preceding @ and captures up to either the end of input or one of [.!?, ].
 	// I need to check the rules for names.  The latter part may work just by using `(\w*)` after the `@?`.
-	const target = command.args[0].replace(/^@?(.*?)[.!?, ]?/, '$1');
+	let target = command.args[0].replace(/^@?(.*?)[.!?, ]?/, '$1');
+	if (target.toLowerCase() === 'no-lynch') {
+		target = 'nolynch';
+	}
 	
 	return dao.ensureGameExists(game)
 		.then(() => {
