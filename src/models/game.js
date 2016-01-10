@@ -30,7 +30,8 @@ module.exports = (db) => {
 		// Human-friendly game name
 		name: {
 			type: orm.TEXT,
-			allowNull: true
+			allowNull: true,
+			unique: true
 		}
 	});
 };

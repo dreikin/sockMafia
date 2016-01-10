@@ -6,6 +6,16 @@ const orm = require('sequelize');
 const Promise = require('bluebird');
 const Models = {};
 
+// Helper functions
+
+function objectExists(object, noun) {
+	noun = typeof noun !== 'undefined' ? noun : 'Object';
+	if (object) {
+		return Promise.resolve(object);
+	}
+	return Promise.reject(noun + ' does not exist');
+}
+
 // Database initialization
 
 let initialised = false;
@@ -116,7 +126,8 @@ module.exports = {
 	},
 
 	gameStatus: {
-		prep: 'prep',
+		auto: 'automatic',
+		prep: 'preparing',
 		running: 'running',
 		paused: 'paused',
 		abandoned: 'abandoned',
@@ -141,11 +152,14 @@ module.exports = {
 	/*
 	 * Basic functions:
 	 * - addGame  Add a game to the database.
+	 * - archiveAutoGame  Archive an automatic game in preparation for a normal one.
 	 * - getGameById  Get a game instance by the game's ID.
 	 * - getGameByName  Get a game instance by the game's friendly name.
+	 * - setGameName  Set the human-friendly name of a game.
 	 */
 	/*
 	 * Derivative functions:
+	 * - convertAutoToPrep  Convert an automatic game to a proper game in the prep phase.
 	 * - ensureGameExists  Return whether a game with a given ID exists.
 	 */
 	/*
@@ -154,41 +168,74 @@ module.exports = {
 	 */
 
 	addGame: function(id, name) {
+		name = typeof name !== 'undefined' ? name : id;
 		return Models.games.create({
 			id: id,
-			name: name,
+			name: '' + name,
 			status: module.exports.gameStatus.prep,
 			time: module.exports.gameTime.day,
 			day: 0
 		});
 	},
 
+	archiveAutoGame: function(id) {
+		// Hopefully this cascades to roster, votes, and segments.
+		return orm.transaction((t) => {
+			return Models.games.update({
+				gameId: 0 - id
+			}, {
+				where: {
+					gameId: id
+				},
+				transaction: t
+			});
+		});
+	},
+
 	getGameById: function(id) {
-		return Models.games.findOne({where: {id: id}});
+		return Models.games.findOne({where: {id: id}})
+			.then((game) => objectExists(game, 'Game'));
 	},
 
 	getGameByName: function(name) {
-		return Models.games.findOne({where: {name: name}});
+		return Models.games.findOne({where: {name: name}})
+			.then((game) => objectExists(game, 'Game'));
 	},
 
-	ensureGameExists: function(id) {
-		return module.exports.getGameById(id).then((game) => {
-			if (game) {
-				return Promise.resolve();
-			} else {
-				return Promise.reject('Game does not exist');
+	setGameName(id, name) {
+		return Models.games.update({
+			name: name
+		}, {
+			where: {
+				id: id
 			}
+		});
+	},
+
+	convertAutoToPrep: function(id, name) {
+		return module.exports.archiveAutoGame(id)
+			.then(() => module.exports.addGame(id, name));
+	},
+
+	ensureGameExists: function(id, createGame) {
+		createGame = typeof createGame !== 'undefined' ? createGame : true;
+		return module.exports.getGameById(id)
+			.then((game) => {
+				if (game) {
+					return Promise.resolve();
+				} else {
+					if (createGame) {
+						return module.exports.addGame(id);
+					}
+					return Promise.reject('Game does not exist');
+				}
 		});
 	},
 
 	getGameId(name) {
-		return module.exports.getGameByName(name).then((game) => {
-			if (game) {
-				return game.id;
-			} else {
-				return Promise.reject('No game by that name.');
-			}
-		});
+		return module.exports.getGameByName(name)
+			.then((game) => objectExists(game, 'Game'))
+			.then((game) => game.id);
 	},
 
 	// Game functions (day, time, and status)
@@ -207,28 +254,35 @@ module.exports = {
 	 */
 
 	getCurrentDay: function(game) {
-		return module.exports.getGameById(game).then((gameInstance) => {
+		return module.exports.getGameById(game)
+			.then((gameInstance) => objectExists(gameInstance, 'Game'))
+			.then((gameInstance) => {
 				return gameInstance.day;
 			});
 	},
 
 	getCurrentTime: function(game) {
-		return module.exports.getGameById(game).then((gameInstance) => {
-			return gameInstance.time;
-		});
+		return module.exports.getGameById(game)
+			.then((gameInstance) => objectExists(gameInstance, 'Game'))
+			.then((gameInstance) => {
+				return gameInstance.time;
+			});
 	},
 
 	getGameStatus: function(game) {
-		return module.exports.getGameById(game).then((gameInstance) => {
-			return gameInstance.status;
-		});
+		return module.exports.getGameById(game)
+			.then((gameInstance) => objectExists(gameInstance, 'Game'))
+			.then((gameInstance) => {
+				return gameInstance.status;
+			});
 	},
 
 	incrementDay: function(game) {
 		return Models.games.findOne({where: {id: game}})
+			.then((gameInstance) => objectExists(gameInstance, 'Game'))
 			.then((gameInstance) => {
-				gameInstance.day++;
-				gameInstance.time = module.exports.gameTime.day;
+				gameInstance.increment('day', {by: 1});
+				gameInstance.time = module.exports.gameTime.morning;
 				return gameInstance.save();
 			}).then((gameInstance) => {
 				return gameInstance.day;
@@ -296,15 +350,15 @@ module.exports = {
 			defaults: {
 				properName: '' + name
 			}
-		});
+		}).spread((player, created) => objectExists(player, 'Player'));
+		/* The docs are less than helpful on whether 'created' is required,
+		 * so it's left in there until further testing is done.
+		 */
 	},
 
 	getPlayerById: function(id) {
-		return Models.players.findOne({
-			where: {
-				id: id
-			}
-		});
+		return Models.players.findOne({where: {id: id}})
+			.then((player) => objectExists(player, 'Player'));
 	},
 
 	getPlayerByName: function(name) {
@@ -312,7 +366,7 @@ module.exports = {
 			where: {
 				name: name.toLowerCase()
 			}
-		});
+		}).then((player) => objectExists(player, 'Player'));
 	},
 
 	setPlayerProperName: function(name) {
@@ -333,17 +387,18 @@ module.exports = {
 	 * - getDeadPlayers  Get all dead players in a game.
 	 * - getLivingPlayers  Get all living players in a game.
 	 * - getMods  Get all moderators for a game.
-	 * - getPlayerStatus  Get the status of a player in a game.
+	 * - getPlayerInGame  Get a player in a game.
 	 * - getSpectators  Get all spectators of a game.
-	 * - isPlayerInGame  Return whether a player is in a game.
-	 * - setPlayerStatus  Set the status of a player in a game.
 	 */
 	/*
 	 * Derivative functions:
 	 * - addMod  Add a moderator to a game's roster.
 	 * - addSpectator  Add a spectator to a game's roster.
 	 * - getNumToLynch  Get the number of votes needed to lynch someone (or no-lynch).
+	 * - getPlayerStatus  Get the status of a player in a game.
+	 * - isPlayerInGame  Return whether a player is in a game.
 	 * - killPlayer  Set a player's status to dead.
+	 * - setPlayerStatus  Set the status of a player in a game.
 	 */
 	/*
 	 * Other functions:
@@ -352,15 +407,18 @@ module.exports = {
 	 */
 
 	addPlayerToGame: function(game, player, status) {
-		status = status || module.exports.playerStatus.alive;
-		return module.exports.addPlayer(player).spread((playerInstance, created) => {
-			return Models.roster.findOrCreate({
-				where: {
-					playerId: playerInstance.id,
-					gameId: game, playerStatus: status
-				}
+		status = typeof status !== 'undefined' ? status : module.exports.playerStatus.alive;
+		return module.exports.getGameById(game)
+			.then(() => module.exports.addPlayer(player))
+			.then((playerInstance) => {
+				return Models.roster.findOrCreate({
+					where: {
+						playerId: playerInstance.id,
+						gameId: game,
+						playerStatus: status
+					}
+				});
 			});
-		}).then(db.sync());
 	},
 
 	getAllPlayers: function(game) {
@@ -397,17 +455,24 @@ module.exports = {
 		});
 	},
 
+	getPlayerInGame: function(game, player) {
+		return module.exports.getGameById(game)
+			.then(() => module.exports.getPlayerByName(player))
+			.then((playerInstance) => {
+				return Models.roster.findOne({
+					where: {
+						gameId: game,
+						playerId: playerInstance.id
+					},
+					include: [Models.players]
+				});
+			})
+			.then((rosterInstance) => objectExists(rosterInstance, 'Roster entry for player'));
+	},
+
 	getPlayerStatus: function(game, player) {
-		return module.exports.getPlayerByName(player).then((playerInstance) => {
-			return Models.roster.findOne({
-				where: {
-					gameId: game,
-					playerId: playerInstance.id
-				}
-			}).then((rosterInstance) => {
-				return rosterInstance.playerStatus;
-			});
-		});
+		return module.exports.getPlayerInGame(game, player)
+			.then((rosterInstance) => rosterInstance.playerStatus);
 	},
 
 	getSpectators: function(game) {
@@ -421,29 +486,14 @@ module.exports = {
 	},
 
 	isPlayerInGame: function(game, player) {
-		return module.exports.getPlayerByName(player)
-			.then((playerInstance) => {
-				if (playerInstance) {
-					return Models.roster.findOne({where: {playerId: playerInstance.id, gameId: game}});
-				}
-				return null;
-			})
-			.then(function(instance) {
-				return instance !== null;
-			});
+		return module.exports.getPlayerInGame(game, player)
+			.then((instance) => instance !== null)
+			.catch(() => false);
 	},
 
 	setPlayerStatus: function(game, player, status) {
-		return module.exports.getPlayerByName(player).then((playerInstance) => {
-			return Models.roster.update({
-				playerStatus: status
-			}, {
-				where: {
-					gameId: game,
-					playerId: playerInstance.id
-				}
-			});
-		});
+		return module.exports.getPlayerInGame(game, player)
+			.then((playerInstance) => playerInstance.update({playerStatus: status}));
 	},
 
 	addMod: function(game, mod) {
@@ -455,32 +505,32 @@ module.exports = {
 	},
 
 	getNumToLynch: function(game) {
-		return module.exports.getLivingPlayers(game).then((players) => {
-			return Math.ceil((players.length + 1) / 2);
-		});
+		return module.exports.getLivingPlayers(game)
+			.then((players) => {
+				return Math.ceil((players.length + 1) / 2);
+			});
 	},
 
 	killPlayer: function(game, player) {
-		return module.exports.getPlayerByName(player).then((playerInstance) => {
-			if (!playerInstance) {
-				return Promise.reject('No such player!');
-			}
-			return module.exports.setPlayerStatus(game, playerInstance.id, module.exports.playerStatus.dead);
-		});
+		return module.exports.getPlayerInGame(game, player)
+			.then((rosterInstance) => {
+				if (rosterInstance.playerStatus !== module.exports.playerStatus.alive) {
+					return Promise.reject(rosterInstance.player.properName + ' is not killable.');
+				}
+				return rosterInstance.update({playerStatus: module.exports.playerStatus.dead});
+			});
 	},
 
 	isPlayerAlive: function(game, player) {
 		return module.exports.getPlayerStatus(game, player)
-			.then(function(status) {
-				return status === module.exports.playerStatus.alive;
-			});
+			.then((status) => status === module.exports.playerStatus.alive)
+			.catch(() => false);
 	},
 
 	isPlayerMod(player, game) {
 		return module.exports.getPlayerStatus(game, player)
-			.then(function(status) {
-				return status === module.exports.playerStatus.mod;
-			});
+			.then((status) => status === module.exports.playerStatus.mod)
+			.catch(() => false);
 	},
 
 	// Vote functions
@@ -505,15 +555,15 @@ module.exports = {
 
 	addVote: function(game, post, voter, target) {
 		return Promise.join(
-			module.exports.getPlayerByName(voter),
-			module.exports.getPlayerByName(target),
+			module.exports.getPlayerInGame(game, voter),
+			module.exports.getPlayerInGame(game, target),
 			module.exports.getGameById(game),
 			(voterInstance, targetInstance, gameInstance) => {
 				return Models.votes.create({
 					post: post,
 					day: gameInstance.day,
-					voterId: voterInstance.id,
-					targetId: targetInstance.id,
+					voterId: voterInstance.playerId,
+					targetId: targetInstance.playerId,
 					gameId: game
 				});
 		});
@@ -580,29 +630,32 @@ module.exports = {
 	},
 	
 	getNumVotesForPlayer: function(game, day, player) {
-		return module.exports.getPlayerByName(player).then((playerInstance) => {
-			return Promise.map(
-				module.exports.getCurrentVotes(game, day),
-				(vote) => {
-					return vote[1].target.id === playerInstance.id ? 1 : 0;
-			}).reduce(
-				(sum, vote) => {
-					return sum + vote;
-				},
-				0 // Initial value.
-			);
-		});
+		return module.exports.getPlayerByName(player)
+			.then((playerInstance) => {
+				return Promise.map(
+					module.exports.getCurrentVotes(game, day),
+					(vote) => vote[1].target.id === playerInstance.id ? 1 : 0
+				).reduce(
+					(sum, vote) => (sum + vote),
+					0 // Initial value.
+				);
+			});
 	},
 
 	hasPlayerVotedToday: function(game, player) {
-		return module.exports.getPlayerByName(player).then((playerInstance) => {
-			return Models.votes.findOne({
-				where: {
-					playerId: playerInstance.id
-				}
-			});
-		}).then((vote) => {
-			return vote !== null;
-		});
+		return Promise.join(
+			module.exports.getPlayerInGame(game, player),
+			module.exports.getGameById(game),
+			(playerInstance, gameInstance) => {
+				return Models.votes.findOne({
+					where: {
+						gameId: game,
+						playerId: playerInstance.id,
+						day: gameInstance.day
+					}
+				});
+			})
+			.then((vote) => vote !== null)
+			.catch(() => false);
 	}
 };

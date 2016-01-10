@@ -2,7 +2,7 @@
 /**
  * Mafiabot plugin
  *
- * Watches for @vote mentions and replies with a canned response
+ * Helps run mafia games, providing features such as vote tracking and listing.
  *
  * @module mafiabot
  * @author Accalia, Dreikin, Yamikuronue
@@ -73,34 +73,36 @@ exports.defaultConfig = {
 // Helper functions
 
 function lynchPlayer(game, target) {
-	return dao.killPlayer(game, target).then(() => {
-		return dao.setCurrentTime(game, dao.gameTime.night);
-	}).then(() => {
-		const text = '@' + target + ' has been lynched! Stay tuned for the flip. <b>It is now Night</b>';
-		internals.browser.createPost(game, null, text, () => 0);
-	}).catch((error) => {
-		const text = 'Error when lynching dead player: ' + error.toString();
-		internals.browser.createPost(game, null, text, () => 0);
-	});
+	return dao.setCurrentTime(game, dao.gameTime.night)
+		.then(() => dao.killPlayer(game, target))
+		.then((rosterEntry) => {
+			const text = '@' + rosterEntry.player.properName + ' has been lynched! Stay tuned for the flip.'
+				+ ' <b>It is now Night.</b>';
+			internals.browser.createPost(game, null, text, () => 0);
+		})
+		.catch((error) => {
+			const text = 'Error when lynching player: ' + error.toString();
+			internals.browser.createPost(game, null, text, () => 0);
+		});
 }
 
 
 function mustBeTrue(check, args, error) {
 	return check.apply(args).then((result) => {
-		if (!result) {
-			return Promise.reject(error);
-		} else {
+		if (result) {
 			return Promise.resolve();
+		} else {
+			return Promise.reject(error);
 		}
 	});
 }
 
 function mustBeFalse(check, args, error) {
 	return check.apply(args).then((result) => {
-		if (result) {
-			return Promise.reject(error);
-		} else {
+		if (!result) {
 			return Promise.resolve();
+		} else {
+			return Promise.reject(error);
 		}
 	});
 }
@@ -109,6 +111,15 @@ function isDaytime(game) {
 	return dao.getCurrentTime(game).then((time) => {
 		return time === dao.gameTime.day;
 	});
+}
+
+function reportError (command, preface, error) {
+	internals.browser.createPost(
+		command.post.topic_id,
+		command.post.post_number,
+		'' + preface + error,
+		() => 0
+	);
 }
 
 /**
@@ -147,10 +158,11 @@ function registerCommands(events) {
 	events.onCommand('vote', 'vote for a player to be executed (alt. form)', exports.voteHandler, () => 0);
 
 	/*Mod commands*/
-	events.onCommand('start', 'Start a new game', exports.startHandler, () => 0);
-	events.onCommand('activate', 'move a game from the prep phase into active play (mod only)', exports.activateHandler, () => 0);
+	events.onCommand('prepare', 'Start a new game', exports.prepHandler, () => 0);
+	events.onCommand('start', 'move a game from the prep phase into active play (mod only)', exports.startHandler, () => 0);
 	events.onCommand('new-day', 'move on to a new day (mod only)', exports.dayHandler, () => 0);
 	events.onCommand('kill', 'kill a player (mod only)', exports.killHandler, () => 0);
+	events.onCommand('end', 'end the game (mod only)', exports.finishHandler, () => 0);
 }
 
 /**
@@ -162,76 +174,74 @@ function registerCommands(events) {
 /*eslint-disable no-console*/
 function registerPlayers(game, players) {
 	return dao.ensureGameExists(game)
-		.then(() => {
-			return Promise.mapSeries(players, function(player) {
+		.then(() => Promise.mapSeries(
+			players,
+			function(player) {
 				console.log('Mafia: Adding player: ' + player);
-				return dao.isPlayerInGame(game, player.toLowerCase())
-					.then((answer) => {
-						if (answer) {
-							return Promise.resolve();
-						} else {
-							return dao.addPlayerToGame(game, player.toLowerCase());
-						}
-					})
+				return dao.addPlayerToGame(game, player)
 					.catch((err) => {
 						console.log('Mafia: Adding player: failed to add player: ' + player
 							+ '\n\tReason: ' + err);
 						return Promise.resolve();
 					});
-			});
-		});
+			}
+		));
 }
 /*eslint-enable no-console*/
 
 // Exported functions and objects
 
-//Mod commands
-/**
- * Move to the next day
- */
+// Mod commands
  
- exports.startHandler = function (command) {
+exports.prepHandler = function (command) {
 	const id = command.post.topic_id;
 	const player = command.post.username;
 	const gameName = command.args[0];
 
-	const reportError = (error) => {
-		internals.browser.createPost(command.post.topic_id,
-			command.post.post_number,
-			'Error when starting game: ' + error, () => 0);
-	};
-
-	return dao.addGame(id, gameName, player)
+	return dao.getGameStatus(id)
+		.then(
+			(status) => {
+				if (status === dao.gameStatus.auto) {
+					return dao.convertAutoToPrep(id, gameName);
+				}
+				return Promise.reject('Game already ' + status);
+			},
+			() => dao.addGame(id, gameName))
+		.then(() => dao.addMod(id, player))
 		.then(() => {
 			internals.browser.createPost(command.post.topic_id,
 				command.post.post_number,
-				'Game ' + gameName + 'created! The  mod is @' + player, () => 0);
+				'Game ' + gameName + 'created! The mod is @' + player, () => 0);
 		})
 		.catch((err) => {
-			reportError(err);
+			reportError(command, 'Error when starting game: ', err);
 		});
 };
 
-exports.activateHandler = function (command) {
-	const gameName = command.args[0];
-	let game;
+exports.startHandler = function (command) {
+	const game = command.post.topic_id;
 	const mod = command.post.username;
 	
-	return dao.getGameId(gameName).then((id) => {
-		if (!id) {
-			return Promise.reject('No such game');
-		}
-		game = id;
-	})
-	.then(() => mustBeTrue(dao.isPlayerMod, [game, mod], 'Poster is not mod'))
-	.then(() => dao.setGameStatus(game, 'active'))
-	.then(() => dao.incrementDay(game));
+	return dao.getGameStatus(game)
+		.then((status) => {
+			if (status === dao.gameStatus.prep) {
+				return Promise.resolve();
+			}
+			if (status === dao.gameStatus.auto) {
+				return Promise.reject('Game not in prep phase. Try `!prepare`.');
+			}
+			return Promise.reject('Game already ' + status);
+		})
+		.then(() => mustBeTrue(dao.isPlayerMod, [game, mod], 'Poster is not mod'))
+		.then(() => dao.setGameStatus(game, dao.gameStatus.running))
+		.then(() => dao.incrementDay(game))
+		.then(() => dao.setCurrentTime(game, dao.gameTime.day))
+		.catch((err) => reportError(command, 'Error when starting game: ', err));
 };
 
 exports.dayHandler = function (command) {
-	const gameName = internals.configuration.name;
+	const game = command.post.topic_id;
 	const mod = command.post.username;
-	let game;
 	const data = {
 		numPlayers: 0,
 		toExecute: 0,
@@ -239,79 +249,100 @@ exports.dayHandler = function (command) {
 		names: []
 	};
 
-	return dao.getGameId(gameName).then((id) => {
-		game = id;
-	})
-	.then(() => mustBeTrue(dao.isPlayerMod, [game, mod], 'Poster is not mod'))
-	.then(() => dao.incrementDay(game))
-	.then( (newDay) => {
-		data.day = newDay;
-		const text = 'Incremented day for ' + gameName;
-		internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
-		return dao.setCurrentTime(game, dao.gameTime.night);
-	}).then(() => {
-		return Promise.all([
-			dao.getNumToLynch(game),
-			dao.getLivingPlayers(game),
-			readFile(__dirname + '/templates/newDayTemplate.handlebars')
-		]).then((results) => {
-			data.toExecute = results[0];
-			data.numPlayers = results[1].length;
-			const source = results[2].toString();
-			
-			data.names = results[1].map((row) => {
-				return row.player.name;
-			});
-			
-			const template = Handlebars.compile(source);
+	return dao.getGameStatus(game)
+		.then((status) => {
+			if (status === dao.gameStatus.running) {
+				return Promise.resolve();
+			}
+			return Promise.reject('Game not started. Try `!start`.');
+		})
+		.then(() => mustBeTrue(dao.isPlayerMod, [game, mod], 'Poster is not mod'))
+		.then(() => dao.incrementDay(game))
+		.then(() => dao.getGameById(game))
+		.then((gameInstance) => {
+			data.day = gameInstance.day;
+			const text = 'Incremented day for ' + gameInstance.name;
+			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+			return dao.setCurrentTime(game, dao.gameTime.day);
+		}).then(() => {
+			return Promise.join(
+				dao.getNumToLynch(game),
+				dao.getLivingPlayers(game),
+				readFile(__dirname + '/templates/newDayTemplate.handlebars'),
+				(toLynch, livingPlayers, sourceFile) => {
+					data.toExecute = toLynch;
+					data.numPlayers = livingPlayers.length;
+					const source = sourceFile.toString();
 
-			const output = template(data);
-			internals.browser.createPost(game, command.post.post_number, output, () => 0);
-		
-		});
-	})
-	.catch((err) => {
-		internals.browser.createPost(command.post.topic_id,
-		command.post.post_number,
-		'Error incrementing day: ' + err, () => 0);
-	});
+					data.names = livingPlayers.map((row) => {
+						return row.player.properName;
+					});
+
+					const template = Handlebars.compile(source);
+
+					const output = template(data);
+					internals.browser.createPost(game, command.post.post_number, output, () => 0);
+				}
+			);
+		})
+		.catch((err) => reportError(command, 'Error incrementing day: ', err));
 };
 
 exports.killHandler = function (command) {
-	const gameName = internals.configuration.name;
-	const target = command.args[0].replace(/^@?(.*)/, '$1');
+	const game = command.post.topic_id;
 	const mod = command.post.username;
-	let game;
+	// The following regex strips a preceding @ and captures up to either the end of input or one of [.!?, ].
+	// I need to check the rules for names.  The latter part may work just by using `(\w*)` after the `@?`.
+	const target = command.args[0].replace(/^@?(.*?)[.!?, ]?/, '$1');
 	
-	return dao.getGameId(gameName)
-		.then((id) => {
-			game = id;
+	return dao.getGameStatus(game)
+		.then((status) => {
+			if (status === dao.gameStatus.running) {
+				return Promise.resolve();
+			}
+			return Promise.reject('Game not started. Try `!start`.');
 		})
-		.then(() => {
-			return Promise.all([
-				mustBeTrue(dao.isPlayerMod, [game, mod], 'Poster is not mod'),
-				mustBeTrue(dao.isPlayerInGame, [game, target], 'Target not in game'),
-				mustBeTrue(dao.isPlayerAlive, [game, target], 'Target not alive')
-			]);
-		})
+		.then(() => mustBeTrue(dao.isPlayerMod, [game, mod], 'Poster is not mod'))
 		.then(() => dao.killPlayer(game, target))
-		.then(() => {
-			const text = 'Killed @' + target + ' in game ' + gameName;
+		.then(() => dao.getGameById(game))
+		.then((gameInstance) => {
+			const text = 'Killed @' + target + ' in game ' + gameInstance.name;
 			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
 		})
-		.catch((err) => {
-			internals.browser.createPost(command.post.topic_id,
-			command.post.post_number,
-			'Error killing player: ' + err, () => 0);
-		});
+		.catch((err) => reportError(command, 'Error killing player: ', err));
 };
 
-//Player commands
+exports.finishHandler = function (command) {
+	const game = command.post.topic_id;
+	const mod = command.post.username;
+
+	return dao.getGameStatus(game)
+		.then((status) => {
+			if (status === dao.gameStatus.running) {
+				return Promise.resolve();
+			}
+			return Promise.reject('Game not started. Try `!start`.');
+		})
+		.then(() => mustBeTrue(dao.isPlayerMod, [game, mod], 'Poster is not mod'))
+		.then(() => dao.incrementDay(game))
+		.then(() => dao.setGameStatus(game, dao.gameStatus.finished))
+		.then(() => exports.listAllPlayersHandler(command))
+		.then(() => {
+			const text = 'Game now finished.';
+			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+		})
+		.catch((err) => reportError(command, 'Error finalizing game: ', err));
+};
+
+// Player commands
+
 exports.voteHandler = function (command) {
 	const game = command.post.topic_id;
 	const post = command.post.post_number;
 	const voter = command.post.username;
-	const target = command.args[0].replace(/^@?(.*)/, '$1');
+	// The following regex strips a preceding @ and captures up to either the end of input or one of [.!?, ].
+	// I need to check the rules for names.  The latter part may work just by using `(\w*)` after the `@?`.
+	const target = command.args[0].replace(/^@?(.*?)[.!?, ]?/, '$1');
 	
 	return dao.ensureGameExists(game)
 		.then(() => {
@@ -390,7 +421,8 @@ exports.voteHandler = function (command) {
 		});
 };
 
-//Open commands
+// Open commands
+
 exports.echoHandler = function (command) {
 	const text = 'topic: ' + command.post.topic_id + '\n'
 		+ 'post: ' + command.post.post_number + '\n'
