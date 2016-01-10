@@ -182,10 +182,10 @@ module.exports = {
 		// Hopefully this cascades to roster, votes, and segments.
 		return db.transaction((t) => {
 			return Models.games.update({
-				gameId: 0 - id
+				id: 0 - id
 			}, {
 				where: {
-					gameId: id
+					id: id
 				},
 				transaction: t
 			});
