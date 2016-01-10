@@ -614,14 +614,19 @@ module.exports = {
 	},
 
 	hasPlayerVotedToday: function(game, player) {
-		return module.exports.getPlayerByName(player).then((playerInstance) => {
-			return Models.votes.findOne({
-				where: {
-					playerId: playerInstance.id
-				}
-			});
-		}).then((vote) => {
-			return vote !== null;
-		});
+		return Promise.join(
+			module.exports.getPlayerInGame(game, player),
+			module.exports.getGameById(game),
+			(playerInstance, gameInstance) => {
+				return Models.votes.findOne({
+					where: {
+						gameId: game,
+						playerId: playerInstance.id,
+						day: gameInstance.day
+					}
+				});
+			})
+			.then((vote) => vote !== null)
+			.catch(() => false);
 	}
 };
