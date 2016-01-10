@@ -384,7 +384,7 @@ describe('mafia', () => {
 			return mafia.voteHandler(command).then(() => {
 				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
 				mafiaDAO.killPlayer.called.should.be.true;
-				mafiaDAO.setCurrentTime.calledWith(mafiaDAO.gameTime.night).should.be.true;
+				mafiaDAO.setCurrentTime.calledWith(12345, mafiaDAO.gameTime.night).should.be.true;
 
 				const output = browser.createPost.getCall(1).args[2];
 				output.should.include('@noLunch has been lynched! Stay tuned for the flip. <b>It is now Night</b>');
