@@ -84,6 +84,33 @@ function lynchPlayer(game, target) {
 	});
 }
 
+
+function mustBeTrue(check, args, error) {
+	return check.apply(args).then((result) => {
+		if (!result) {
+			return Promise.reject(error);
+		} else {
+			return Promise.resolve();
+		}
+	});
+}
+
+function mustBeFalse(check, args, error) {
+	return check.apply(args).then((result) => {
+		if (result) {
+			return Promise.reject(error);
+		} else {
+			return Promise.resolve();
+		}
+	});
+}
+
+function isDaytime(game) {
+	return dao.getCurrentTime(game).then((time) => {
+		return time === dao.gameTime.day;
+	});
+}
+
 /**
  * Shuffle function using Fisher-Yates algorithm, from SO
  *
@@ -121,6 +148,7 @@ function registerCommands(events) {
 
 	/*Mod commands*/
 	events.onCommand('start', 'Start a new game', exports.startHandler, () => 0);
+	events.onCommand('activate', 'move a game from the prep phase into active play (mod only)', exports.activateHandler, () => 0);
 	events.onCommand('new-day', 'move on to a new day (mod only)', exports.dayHandler, () => 0);
 	events.onCommand('kill', 'kill a player (mod only)', exports.killHandler, () => 0);
 }
@@ -157,10 +185,47 @@ function registerPlayers(game, players) {
 
 // Exported functions and objects
 
-exports.activateHandler = function (command) {
+//Mod commands
+/**
+ * Move to the next day
+ */
+ 
+ exports.startHandler = function (command) {
+	const id = command.post.topic_id;
+	const player = command.post.username;
 	const gameName = command.args[0];
 
+	const reportError = (error) => {
+		internals.browser.createPost(command.post.topic_id,
+			command.post.post_number,
+			'Error when starting game: ' + error, () => 0);
+	};
 
+	return dao.addGame(id, gameName, player)
+		.then(() => {
+			internals.browser.createPost(command.post.topic_id,
+				command.post.post_number,
+				'Game ' + gameName + 'created! The  mod is @' + player, () => 0);
+		})
+		.catch((err) => {
+			reportError(err);
+		});
+};
+
+exports.activateHandler = function (command) {
+	const gameName = command.args[0];
+	let game;
+	const mod = command.post.username;
+	
+	return dao.getGameId(gameName).then((id) => {
+		if (!id) {
+			return Promise.reject('No such game');
+		}
+		game = id;
+	})
+	.then(() => mustBeTrue(dao.isPlayerMod, [game, mod], 'Poster is not mod'))
+	.then(() => dao.setGameStatus(game, 'active'))
+	.then(() => dao.incrementDay(game));
 };
 
 exports.dayHandler = function (command) {
@@ -175,81 +240,40 @@ exports.dayHandler = function (command) {
 	};
 
 	return dao.getGameId(gameName).then((id) => {
-			if (!id) {
-				return Promise.reject('No such game');
-			}
-			game = id;
-			return dao.ensureGameExists(game);
-		})
-		.then(() => dao.isPlayerMod(game, mod))
-		.then((isMod) => {
-			if (!isMod) {
-				return Promise.reject('Poster is not mod');
-			}
-			return dao.incrementDay(game);
-		}).then( (newDay) => {
-			data.day = newDay;
-			const text = 'Incremented day for ' + gameName;
-			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
-			return dao.setCurrentTime(game, dao.gameTime.night);
-		}).then(() => {
-			return dao.getNumToLynch(game);
-		}).then( (num) => {
-			data.toExecute = num;
-			return dao.getLivingPlayers(game);
-		}).then( (rows) => {
-			const players = rows.map((row) => {
+		if (!id) {
+			return Promise.reject('No such game');
+		}
+		game = id;
+	})
+	.then(mustBeTrue(dao.isPlayerMod, [game, mod], 'Poster is not mod'))
+	.then(dao.incrementDay(game))
+	.then( (newDay) => {
+		data.day = newDay;
+		const text = 'Incremented day for ' + gameName;
+		internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+		return dao.setCurrentTime(game, dao.gameTime.night);
+	}).then(() => {
+		Promise.all([
+			dao.getNumToLynch(game),
+			dao.getLivingPlayers(game),
+			readFile(__dirname + '/templates/newDayTemplate.handlebars')
+		]).then((results) => {
+			data.toExecute = results[0];
+			data.numPlayers = results[1].length;
+			const source = results[2].toString();
+			
+			data.names = results[1].map((row) => {
 				return row.player.name;
 			});
-
-			data.numPlayers = players.length;
-			return readFile(__dirname + '/templates/voteTemplate.handlebars');
-		}).then((buffer) => {
-			const source = buffer.toString();
+			
 			const template = Handlebars.compile(source);
 
 			const output = template(data);
 			internals.browser.createPost(game, command.post.post_number, output, () => 0);
+		
 		});
-};
-
-exports.echoHandler = function (command) {
-	const text = 'topic: ' + command.post.topic_id + '\n'
-		+ 'post: ' + command.post.post_number + '\n'
-		+ 'input: `' + command.input + '`\n'
-		+ 'command: `' + command.command + '`\n'
-		+ 'args: `' + command.args + '`\n'
-		+ 'mention: `' + command.mention + '`\n'
-		+ 'post:\n[quote]\n' + command.post.cleaned + '\n[/quote]';
-	internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
-};
-
-exports.joinHandler = function (command) {
-	const id = command.post.topic_id;
-	const player = command.post.username;
-	
-	const reportError = (error) => {
-		internals.browser.createPost(command.post.topic_id,
-									command.post.post_number,
-									'Error when adding to game: ' + error, () => 0);
-	};
-	
-	return dao.ensureGameExists(id)
-	.then(() => dao.isPlayerInGame(id, player.toLowerCase()))
-	.then((answer) => {
-		if (answer) {
-			reportError('You are already in this game, @' + player + '!');
-			return Promise.resolve();
-		} else {
-			return dao.addPlayerToGame(id, player.toLowerCase()).then(() => {
-				internals.browser.createPost(command.post.topic_id,
-											command.post.post_number,
-											'Welcome to the game, @' + player, () => 0);
-			});
-		}
-	})
-	.catch((err) => {
-		reportError(err);
+		return ;
+		return ;
 	});
 };
 
@@ -261,35 +285,138 @@ exports.killHandler = function (command) {
 	
 	return dao.getGameId(gameName)
 		.then((id) => {
-			if (!id) {
-				return Promise.reject('No such game');
-			}
 			game = id;
-			return dao.ensureGameExists(game);
 		})
-		.then(() => dao.isPlayerMod(game, mod))
-		.then((isMod) => {
-			if (!isMod) {
-				return Promise.reject('Poster is not mod');
-			}
-			return dao.isPlayerInGame(game, target);
+		.then(() => {
+			return Promise.all([
+				mustBeTrue(dao.isPlayerMod, [game, mod], 'Poster is not mod'),
+				mustBeTrue(dao.isPlayerInGame, [game, target], 'Target not in game'),
+				mustBeTrue(dao.isPlayerAlive, [game, target], 'Target not alive')
+			]);
 		})
-		.then((inGame) => {
-			if (!inGame) {
-				return Promise.reject('Target not in game');
-			}
-			return dao.isPlayerAlive(game, target);
-		})
-		.then((isAlive) => {
-			if (!isAlive) {
-				return Promise.reject('Target not alive');
-			}
-			return dao.killPlayer(game, target);
-		}).then(() => {
+		.then(dao.killPlayer(game, target))
+		.then(() => {
 			const text = 'Killed @' + target + ' in game ' + gameName;
 			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
-			return Promise.resolve();
+		})
+		.catch((err) => {
+			internals.browser.createPost(command.post.topic_id,
+			command.post.post_number,
+			'Error killing player: ' + err, () => 0);
 		});
+};
+
+//Player commands
+exports.voteHandler = function (command) {
+	const game = command.post.topic_id;
+	const post = command.post.post_number;
+	const voter = command.post.username;
+	const target = command.args[0].replace(/^@?(.*)/, '$1');
+	
+	return dao.ensureGameExists(game)
+		.then(() => {
+			return Promise.all([
+				mustBeTrue(dao.isPlayerInGame, [game, voter], 'Voter not in game'),
+				mustBeTrue(dao.isPlayerAlive, [game, voter], 'Voter not alive'),
+				mustBeTrue(dao.isPlayerInGame, [game, target], 'Target not in game'),
+				mustBeTrue(dao.isPlayerAlive, [game, target], 'Target not alive'),
+				mustBeTrue(isDaytime, [game], 'It is not day')
+			]);
+		})
+		.then(() => dao.addVote(game, post, voter, target))
+		.then((result) => {
+			if (!result) {
+				return Promise.reject('Vote failed');
+			}
+			let text;
+
+			if (unvoteNicks.contains(target.toLowerCase())) {
+				text = '@' + command.post.username + ' rescinded their vote';
+			} else {
+				text = '@' + command.post.username + ' voted for @' + target;
+			}
+
+			text = text	+ ' in post #<a href="https://what.thedailywtf.com/t/'
+				+ command.post.topic_id + '/' + command.post.post_number + '">'
+				+ command.post.post_number + '</a>.\n\n'
+				+ 'Vote text:\n[quote]\n' + command.input + '\n[/quote]';
+			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+			return true;
+		})
+		.then(() => dao.getCurrentDay(game))
+		.then((day) => {
+			return Promise.join(
+				dao.getNumToLynch(game),
+				dao.getNumVotesForPlayer(game, day, target),
+				function (numToLynch, numReceived) {
+					if (numToLynch <= numReceived) {
+						return lynchPlayer(game, target);
+					} else {
+						return Promise.resolve();
+					}
+				}
+			);
+		}).catch((reason) => {
+			let text = ':wtf:';
+
+			if (reason === 'Voter not in game') {
+				text = '@' + voter + ': You are not yet a player.\n'
+					+ 'Please use `@' + internals.configuration.username + ' join` to join the game.';
+			} else if (reason === 'Voter not alive') {
+				text = 'Aaagh! Ghosts!\n'
+					+ '(@' + voter + ': You are no longer among the living.)';
+			} else if (reason === 'Target not in game') {
+				text = 'Who? I\'m sorry, @' + voter + ' but your princess is in another castle.\n'
+					+ '(' + target + ' is not in this game.)';
+			} else if (reason === 'Target not alive') {
+				text = '@' + voter + ': You would be wise to not speak ill of the dead.';
+			} else if (reason === 'Vote failed') {
+				text = ':wtf:\nSorry, @' + voter + ': your vote failed.  No, I don\'t know why.'
+					+ ' You\'ll have to ask @' + internals.configuration.owner + ' about that.';
+			} else {
+				text += '\n' + reason;
+			}
+
+			text += '\n<hr />\n';
+			text += '@' + command.post.username + ' tried to vote for ' + target
+				+ ' in post #<a href="https://what.thedailywtf.com/t/'
+				+ command.post.topic_id + '/' + command.post.post_number + '">'
+				+ command.post.post_number + '</a>.\n\n'
+				+ 'Vote text:\n[quote="' + command.post.username
+				+ ', post:' + command.post.post_number
+				+ ', topic:' + command.post.topic_id + '"]\n'
+				+ command.input + '\n[/quote]';
+			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+		});
+};
+
+//Open commands
+exports.echoHandler = function (command) {
+	const text = 'topic: ' + command.post.topic_id + '\n'
+		+ 'post: ' + command.post.post_number + '\n'
+		+ 'input: `' + command.input + '`\n'
+		+ 'command: `' + command.command + '`\n'
+		+ 'args: `' + command.args + '`\n'
+		+ 'mention: `' + command.mention + '`\n'
+		+ 'post:\n[quote]\n' + command.post.cleaned + '\n[/quote]';
+	internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+	return Promise.resolve();
+};
+
+exports.joinHandler = function (command) {
+	const id = command.post.topic_id;
+	const post = command.post.post_number;
+	const player = command.post.username;
+	
+	const reportError = (error) => {
+		internals.browser.createPost(id, post, 'Error when adding to game: ' + error, () => 0);
+	};
+	
+	return dao.ensureGameExists(id)
+		.then(() => mustBeFalse(dao.isPlayerInGame, [id, player], 'You are already in this game, @' + player + '!'))
+		.then(() => dao.addPlayerToGame(id, player.toLowerCase()))
+		.then(() => internals.browser.createPost(id, post, 'Welcome to the game, @' + player, () => 0))
+		.catch(reportError);
 };
 
 exports.listPlayersHandler = function (command) {
@@ -325,7 +452,7 @@ exports.listPlayersHandler = function (command) {
 
 			output += '###Mod(s):\n';
 			if (internals.configuration.mods.length <= 0) {
-				output += 'None.  Weird.';
+				output += 'None. Weird.';
 			} else {
 				internals.configuration.mods.forEach((mod) => {
 					output += '- ' + mod + '\n';
@@ -387,7 +514,7 @@ exports.listAllPlayersHandler = function (command) {
 
 		output += '###Mod(s):\n';
 		if (internals.configuration.mods.length <= 0) {
-			output += 'None.  Weird.';
+			output += 'None. Weird.';
 		} else {
 			internals.configuration.mods.forEach((mod) => {
 				output += '- ' + mod + '\n';
@@ -508,123 +635,6 @@ exports.mentionHandler = function (_, topic, post) {
 	internals.browser.createPost(topic.id, post.post_number, reply, () => 0);
 };
 
-exports.startHandler = function (command) {
-	const id = command.post.topic_id;
-	const player = command.post.username;
-	const gameName = command.args[0];
-
-	const reportError = (error) => {
-		internals.browser.createPost(command.post.topic_id,
-			command.post.post_number,
-			'Error when starting game: ' + error, () => 0);
-	};
-
-	return dao.addGame(id, gameName, player)
-		.then(() => {
-			internals.browser.createPost(command.post.topic_id,
-				command.post.post_number,
-				'Game ' + gameName + 'created! The  mod is @' + player, () => 0);
-		})
-		.catch((err) => {
-			reportError(err);
-		});
-};
-
-exports.voteHandler = function (command) {
-	const game = command.post.topic_id;
-	const post = command.post.post_number;
-	const voter = command.post.username.toLowerCase();
-	const target = command.args[0].toLowerCase().replace(/^@?(.*)/, '$1');
-	let numToLynch;
-
-	return dao.ensureGameExists(game)
-		.then(() => dao.isPlayerInGame(game, voter))
-		.then((inGame) => {
-			if (!inGame) {
-				return Promise.reject('Voter not in game');
-			}
-			return dao.isPlayerAlive(game, voter);
-		})
-		.then((isAlive) => {
-			if (!isAlive) {
-				return Promise.reject('Voter not alive');
-			}
-			return dao.isPlayerInGame(game, target);
-		})
-		.then((inGame) => {
-			if (!inGame && !unvoteNicks.contains(target)) {
-				return Promise.reject('Target not in game');
-			}
-			return dao.isPlayerAlive(game, target);
-		})
-		.then((isAlive) => {
-			if (!isAlive && !unvoteNicks.contains(target)) {
-				return Promise.reject('Target not alive');
-			}
-			return dao.addVote(game, post, voter, target);
-		})
-		.then((result) => {
-			if (!result) {
-				return Promise.reject('Vote failed');
-			}
-			let text;
-
-			if (unvoteNicks.contains(target)) {
-				text = '@' + command.post.username + ' rescinded their vote';
-			} else {
-				text = '@' + command.post.username + ' voted for @' + target;
-			}
-
-			text = text	+ ' in post #<a href="https://what.thedailywtf.com/t/'
-				+ command.post.topic_id + '/' + command.post.post_number + '">'
-				+ command.post.post_number + '</a>.\n\n'
-				+ 'Vote text:\n[quote]\n' + command.input + '\n[/quote]';
-			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
-			return dao.getNumToLynch(game);
-		}).then((num) => {
-			/*Execution handler*/
-			numToLynch = num;
-			return dao.getCurrentDay(game).then((day) => dao.getNumVotesForPlayer(game, day, target));
-		}).then((numVotes) => {
-			if (numToLynch >= numVotes && !unvoteNicks.contains(target)) {
-				//return lynchPlayer(game, target); //Fuck it, this is glitchy as hell
-				return Promise.resolve();
-			} else {
-				return Promise.resolve();
-			}
-		}).catch((reason) => {
-			let text = ':wtf:';
-
-			if (reason === 'Voter not in game') {
-				text = '@' + voter + ': You are not yet a player.\n'
-					+ 'Please use `@' + internals.configuration.username + ' join` to join the game.';
-			} else if (reason === 'Voter not alive') {
-				text = 'Aaagh! Ghosts!\n'
-					+ '(@' + voter + ': You are no longer among the living.)';
-			} else if (reason === 'Target not in game') {
-				text = 'Who? I\'m sorry, @' + voter + ' but your princess is in another castle.\n'
-					+ '(' + target + ' is not in this game.)';
-			} else if (reason === 'Target not alive') {
-				text = '@' + voter + ': You would be wise to not speak ill of the dead.';
-			} else if (reason === 'Vote failed') {
-				text = ':wtf:\nSorry, @' + voter + ': your vote failed.  No, I don\'t know why.'
-					+ ' You\'ll have to ask @' + internals.configuration.owner + ' about that.';
-			} else {
-				text += '\n' + reason;
-			}
-
-			text += '\n<hr />\n';
-			text += '@' + command.post.username + ' tried to vote for ' + target
-				+ ' in post #<a href="https://what.thedailywtf.com/t/'
-				+ command.post.topic_id + '/' + command.post.post_number + '">'
-				+ command.post.post_number + '</a>.\n\n'
-				+ 'Vote text:\n[quote="' + command.post.username
-				+ ', post:' + command.post.post_number
-				+ ', topic:' + command.post.topic_id + '"]\n'
-				+ command.input + '\n[/quote]';
-			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
-		});
-};
 
 // Required exports
 
