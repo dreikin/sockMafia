@@ -341,13 +341,13 @@ exports.voteHandler = function (command) {
 				+ command.post.post_number + '</a>.\n\n'
 				+ 'Vote text:\n[quote]\n' + command.input + '\n[/quote]';
 			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+			return true;
 		})
-		.then(() => {
-			Promise.join(
+		.then(() => dao.getCurrentDay(game))
+		.then((day) => {
+			return Promise.join(
 				dao.getNumToLynch(game),
-				dao.getCurrentDay(game).then((day) => {
-					return dao.getNumVotesForPlayer(game, day, target);
-				}),
+				dao.getNumVotesForPlayer(game, day, target),
 				function (numToLynch, numReceived) {
 					if (numToLynch <= numReceived) {
 						return lynchPlayer(game, target);
@@ -356,21 +356,6 @@ exports.voteHandler = function (command) {
 					}
 				}
 			);
-			/*Promise.all([
-				dao.getNumToLynch(game),
-				dao.getCurrentDay(game).then((day) => {
-							return dao.getNumVotesForPlayer(game, day, target);
-						})
-			]).then((results) => {
-				const numToLynch = results[0];
-				const numReceived = results[1];
-			
-				if (numToLynch >= numReceived) {
-					return lynchPlayer(game, target);
-				} else {
-					return Promise.resolve();
-				}
-			});*/
 		}).catch((reason) => {
 			let text = ':wtf:';
 

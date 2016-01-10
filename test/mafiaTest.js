@@ -13,6 +13,7 @@ const expect = chai.expect;
 
 const mafia = require('../src/mafiabot');
 const mafiaDAO = require('../src/dao.js');
+const Handlebars = require('handlebars');
 
 const fakeConfig = {
 	mergeObjects: sinon.stub().returns({
@@ -700,20 +701,237 @@ describe('mafia', () => {
 				}
 			};
 			
+			const players = [
+				{player: {'name': 'yamikuronue'}, 'playerStatus': 'alive'},
+				{player: {'name': 'accalia'}, 'playerStatus': 'alive'}
+			];
+
+			
 			const votes = {
 				old: [], 
-				current: {
-					yamikuronue: {}
-				}
-			}
+				current: [
+					{
+						target: {
+							name: 'accalia'
+						},
+						voter: {
+							name: 'yamikuronue'
+						},
+						post: 123
+					}
+				]
+			};
 			
 			
 			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
 			sandbox.stub(mafiaDAO, 'getCurrentDay').resolves(42);
 			sandbox.stub(mafiaDAO, 'getNumToLynch').resolves(69);
-			sandbox.stub(mafiaDAO, 'getAllVotesForDaySorted').resolves(69);
+			sandbox.stub(mafiaDAO, 'getAllVotesForDaySorted').resolves(votes);
+			sandbox.stub(mafiaDAO, 'getLivingPlayers').resolves(players);
+			const fakeTemplate = sandbox.stub().returns('Some string output');
+			sandbox.stub(Handlebars, 'compile').returns(fakeTemplate);
 			
-			//TODO: finish me
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: ['dreikin']
+			};
+			
+			return mafia.listVotesHandler(command).then(() => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+				
+				fakeTemplate.called.should.be.true;
+				const dataSent = fakeTemplate.getCall(0).args[0];
+				
+				dataSent.numPlayers.should.equal(2);
+				dataSent.notVoting.should.include('accalia');
+				dataSent.notVoting.should.not.include('yamikuronue');
+				dataSent.numNotVoting.should.equal(1);
+				dataSent.votes.accalia.names.length.should.equal(1);
+				dataSent.votes.accalia.names.should.include({
+						voter: 'yamikuronue',
+						retracted: false,
+						post: 123,
+						game: 12345
+				});
+			});
+		});
+		
+		it('should output outdated votes', () => {
+			const browser = {
+				createPost: sinon.stub()
+			};
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				}
+			};
+			
+			const players = [
+				{player: {'name': 'yamikuronue'}, 'playerStatus': 'alive'},
+				{player: {'name': 'accalia'}, 'playerStatus': 'alive'}
+			];
+
+			
+			const votes = {
+				old: [
+					{
+						target: {
+							name: 'tehNinja'
+						},
+						voter: {
+							name: 'yamikuronue'
+						},
+						post: 121
+					}
+				], 
+				current: [
+					{
+						target: {
+							name: 'accalia'
+						},
+						voter: {
+							name: 'yamikuronue'
+						},
+						post: 123
+					}
+				]
+			};
+			
+			
+			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
+			sandbox.stub(mafiaDAO, 'getCurrentDay').resolves(42);
+			sandbox.stub(mafiaDAO, 'getNumToLynch').resolves(69);
+			sandbox.stub(mafiaDAO, 'getAllVotesForDaySorted').resolves(votes);
+			sandbox.stub(mafiaDAO, 'getLivingPlayers').resolves(players);
+			const fakeTemplate = sandbox.stub().returns('Some string output');
+			sandbox.stub(Handlebars, 'compile').returns(fakeTemplate);
+			
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: ['dreikin']
+			};
+			
+			return mafia.listVotesHandler(command).then(() => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+				
+				fakeTemplate.called.should.be.true;
+				const dataSent = fakeTemplate.getCall(0).args[0];
+
+				dataSent.votes.accalia.names.length.should.equal(1);
+				dataSent.votes.accalia.names.should.include({
+						voter: 'yamikuronue',
+						retracted: false,
+						post: 123,
+						game: 12345
+				});
+				dataSent.votes.tehNinja.names.length.should.equal(1);
+				dataSent.votes.tehNinja.names.should.include({
+						voter: 'yamikuronue',
+						retracted: true,
+						post: 121,
+						game: 12345
+				});
+			});
+		});
+		
+		it('should not output the unvote hack', () => {
+			const browser = {
+				createPost: sinon.stub().yields()
+			};
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				}
+			};
+			
+			const players = [
+				{player: {'name': 'yamikuronue'}, 'playerStatus': 'alive'},
+				{player: {'name': 'accalia'}, 'playerStatus': 'alive'}
+			];
+
+			
+			const votes = {
+				old: [
+					{
+						target: {
+							name: 'tehNinja'
+						},
+						voter: {
+							name: 'yamikuronue'
+						},
+						post: 121
+					},
+					{
+						target: {
+							name: 'unvote'
+						},
+						voter: {
+							name: 'yamikuronue'
+						},
+						post: 122
+					}
+				], 
+				current: [
+					{
+						target: {
+							name: 'accalia'
+						},
+						voter: {
+							name: 'yamikuronue'
+						},
+						post: 123
+					},
+					{
+						target: {
+							name: 'noLynch'
+						},
+						voter: {
+							name: 'accalia'
+						},
+						post: 125
+					}
+				]
+			};
+			
+			
+			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
+			sandbox.stub(mafiaDAO, 'getCurrentDay').resolves(42);
+			sandbox.stub(mafiaDAO, 'getNumToLynch').resolves(69);
+			sandbox.stub(mafiaDAO, 'getAllVotesForDaySorted').resolves(votes);
+			sandbox.stub(mafiaDAO, 'getLivingPlayers').resolves(players);
+			const fakeTemplate = sandbox.stub().returns('Some string output');
+			sandbox.stub(Handlebars, 'compile').returns(fakeTemplate);
+			
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: ['dreikin']
+			};
+			
+			return mafia.listVotesHandler(command).then(() => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+				
+				fakeTemplate.called.should.be.true;
+				const dataSent = fakeTemplate.getCall(0).args[0];
+
+				dataSent.votes.accalia.names.length.should.equal(1);
+				dataSent.votes.accalia.names.should.include({
+						voter: 'yamikuronue',
+						retracted: false,
+						post: 123,
+						game: 12345
+				});
+				dataSent.votes.tehNinja.names.length.should.equal(1);
+				dataSent.votes.tehNinja.names.should.include({
+						voter: 'yamikuronue',
+						retracted: true,
+						post: 121,
+						game: 12345
+				});
+			});
 		});
 	});
 });
