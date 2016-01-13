@@ -14,6 +14,8 @@ const expect = chai.expect;
 const mafia = require('../src/mafiabot');
 const mafiaDAO = require('../src/dao.js');
 
+const Handlebars = require('handlebars');
+
 const fakeConfig = {
 	mergeObjects: sinon.stub().returns({
 		db: './mafiadbTesting'
@@ -22,12 +24,16 @@ const fakeConfig = {
 
 describe('mafia', () => {
 
-	let sandbox, notificationSpy, commandSpy;
+	let sandbox, notificationSpy, commandSpy, browser;
 	beforeEach(() => {
 		sandbox = sinon.sandbox.create();
 		mafia.createDB = sandbox.stub();
 		notificationSpy = sinon.spy();
 		commandSpy = sinon.spy();
+		
+		browser = {
+			createPost: sandbox.spy()
+		};
 	});
 	afterEach(() => {
 		sandbox.restore();
@@ -57,6 +63,13 @@ describe('mafia', () => {
 			};
 			mafia.prepare(null, fakeConfig, events, undefined);
 			notificationSpy.calledWith('mentioned', mafia.mentionHandler).should.be.true;
+			commandSpy.calledWith('for').should.be.true;
+			commandSpy.calledWith('join').should.be.true;
+			commandSpy.calledWith('list-all-players').should.be.true;
+			commandSpy.calledWith('list-players').should.be.true;
+			commandSpy.calledWith('list-votes').should.be.true;
+			commandSpy.calledWith('kill').should.be.true;
+			commandSpy.calledWith('new-day').should.be.true;
 		});
 	});
 
@@ -71,9 +84,6 @@ describe('mafia', () => {
 		});
 
 		it('should echo what is passed in', () => {
-			const browser = {
-				createPost: sinon.spy()
-			};
 			const command = {
 				post: {
 					'topic_id': 12345,
@@ -99,7 +109,7 @@ describe('mafia', () => {
 		});
 	});
 
-	describe('for()', () => {
+	describe('for()', () => {			
 		it('should be a registered command', () => {
 			const events = {
 				onCommand: commandSpy,
@@ -110,9 +120,7 @@ describe('mafia', () => {
 		});
 		
 		it('should reject votes from non-players', () => {
-			const browser = {
-				createPost: sinon.spy()
-			};
+
 			const command = {
 				post: {
 					username: 'tehNinja',
@@ -138,9 +146,6 @@ describe('mafia', () => {
 		});
 		
 		it('should reject votes for non-players', () => {
-			const browser = {
-				createPost: sinon.spy()
-			};
 			const command = {
 				post: {
 					username: 'tehNinja',
@@ -166,9 +171,6 @@ describe('mafia', () => {
 		});
 		
 		it('should reject votes from the dead', () => {
-			const browser = {
-				createPost: sinon.spy()
-			};
 			const command = {
 				post: {
 					username: 'tehNinja',
@@ -194,9 +196,6 @@ describe('mafia', () => {
 		});
 
 		it('should reject votes for the dead', () => {
-			const browser = {
-				createPost: sinon.spy()
-			};
 			const command = {
 				post: {
 					username: 'tehNinja',
@@ -220,11 +219,86 @@ describe('mafia', () => {
 				output.should.include('Aaagh! Ghosts!');
 			});
 		});
+		
+		it('should reject votes at night', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				},
+				args: ['@noLunch'],
+				input: '!for @noLunch'
+			};
+
+			mafia.internals.browser = browser;
+			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
+			sandbox.stub(mafiaDAO, 'isPlayerAlive').resolves(true);
+			sandbox.stub(mafiaDAO, 'getCurrentTime').resolves(mafiaDAO.gameTime.night);
+			sandbox.stub(mafiaDAO, 'addVote').resolves(true);
+
+			return mafia.voteHandler(command).then(() => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('It is not day');
+			});
+		});
+
+		it('should announce voting failures', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				},
+				args: ['@noLunch'],
+				input: '!for @noLunch'
+			};
+
+			mafia.internals.browser = browser;
+			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
+			sandbox.stub(mafiaDAO, 'isPlayerAlive').resolves(true);
+			sandbox.stub(mafiaDAO, 'getCurrentTime').resolves(mafiaDAO.gameTime.day);
+			sandbox.stub(mafiaDAO, 'addVote').resolves(false);
+
+			return mafia.voteHandler(command).then(() => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include(':wtf:\nSorry, @tehNinja: your vote failed.  No, I don\'t know why.');
+			});
+		});
+		
+		it('should echo when you rescind your vote', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				},
+				args: ['@unvote'],
+				input: '!for @unvote'
+			};
+
+			mafia.internals.browser = browser;
+			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
+			sandbox.stub(mafiaDAO, 'isPlayerAlive').resolves(true);
+			sandbox.stub(mafiaDAO, 'getCurrentTime').resolves(mafiaDAO.gameTime.day);
+			sandbox.stub(mafiaDAO, 'getNumToLynch').resolves(100);
+			sandbox.stub(mafiaDAO, 'getCurrentDay').resolves(1);
+			sandbox.stub(mafiaDAO, 'getNumVotesForPlayer').resolves(1);
+			sandbox.stub(mafiaDAO, 'addVote').resolves(true);
+
+			return mafia.voteHandler(command).then(() => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+			});
+		});
 
 		it('should echo your vote when successful', () => {
-			const browser = {
-				createPost: sinon.spy()
-			};
 			const command = {
 				post: {
 					username: 'tehNinja',
@@ -262,9 +336,6 @@ describe('mafia', () => {
 		});
 
 		it('should not allow duplicates', () => {
-			const browser = {
-				createPost: sinon.stub()
-			};
 			const command = {
 				post: {
 					username: 'tehNinja',
@@ -288,9 +359,6 @@ describe('mafia', () => {
 		});
 
 		it('should report errors', () => {
-			const browser = {
-				createPost: sinon.stub()
-			};
 			const command = {
 				post: {
 					username: 'tehNinja',
@@ -315,9 +383,6 @@ describe('mafia', () => {
 		});
 
 		it('should facilitate joining', () => {
-			const browser = {
-				createPost: sinon.stub()
-			};
 			const command = {
 				post: {
 					username: 'tehNinja',
@@ -351,9 +416,6 @@ describe('mafia', () => {
 		});
 		
 		it('should report players', () => {
-			const browser = {
-				createPost: sinon.stub()
-			};
 			const command = {
 				post: {
 					username: 'tehNinja',
@@ -381,7 +443,600 @@ describe('mafia', () => {
 				
 				const output = browser.createPost.getCall(0).args[2];
 				output.should.include('yamikuronue');
-				output.should.include('accalia');
+				output.should.not.include('accalia');
+				output.should.include('dreikin');
+			});
+		});
+		
+		it('should report lack of living players', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				}
+			};
+			
+			const players = [
+				{player: {'name': 'yamikuronue'}, 'playerStatus': 'dead'},
+				{player: {'name': 'accalia'}, 'playerStatus': 'dead'}
+			];
+
+
+			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
+			sandbox.stub(mafiaDAO, 'getAllPlayers').resolves(players);
+			
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: []
+			};
+
+			return mafia.listPlayersHandler(command).then(() => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+				
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('Nobody! Aren\'t you special?\n');
+				output.should.not.include('accalia');
+				output.should.not.include('yamikuronue');
+				output.should.include('None. Weird.');
+			});
+		});
+	});
+	
+	describe('list-votes()', () => {
+		it('should output votes', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				}
+			};
+			
+			const players = [
+				{player: {'name': 'yamikuronue'}, 'playerStatus': 'alive'},
+				{player: {'name': 'accalia'}, 'playerStatus': 'alive'}
+			];
+
+			
+			const votes = {
+				old: [],
+				current: [
+					{
+						target: {
+							name: 'accalia'
+						},
+						voter: {
+							name: 'yamikuronue'
+						},
+						post: 123
+					}
+				]
+			};
+			
+			
+			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
+			sandbox.stub(mafiaDAO, 'getCurrentDay').resolves(42);
+			sandbox.stub(mafiaDAO, 'getNumToLynch').resolves(69);
+			sandbox.stub(mafiaDAO, 'getAllVotesForDaySorted').resolves(votes);
+			sandbox.stub(mafiaDAO, 'getLivingPlayers').resolves(players);
+			const fakeTemplate = sandbox.stub().returns('Some string output');
+			sandbox.stub(Handlebars, 'compile').returns(fakeTemplate);
+			
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: ['dreikin']
+			};
+			
+			return mafia.listVotesHandler(command).then(() => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+				
+				fakeTemplate.called.should.be.true;
+				const dataSent = fakeTemplate.getCall(0).args[0];
+				
+				dataSent.numPlayers.should.equal(2);
+				dataSent.notVoting.should.include('accalia');
+				dataSent.notVoting.should.not.include('yamikuronue');
+				dataSent.numNotVoting.should.equal(1);
+				dataSent.votes.accalia.names.length.should.equal(1);
+				dataSent.votes.accalia.names.should.include({
+						voter: 'yamikuronue',
+						retracted: false,
+						post: 123,
+						game: 12345
+				});
+			});
+		});
+		
+		it('should output outdated votes', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				}
+			};
+			
+			const players = [
+				{player: {'name': 'yamikuronue'}, 'playerStatus': 'alive'},
+				{player: {'name': 'accalia'}, 'playerStatus': 'alive'}
+			];
+
+			
+			const votes = {
+				old: [
+					{
+						target: {
+							name: 'tehNinja'
+						},
+						voter: {
+							name: 'yamikuronue'
+						},
+						post: 121
+					}
+				],
+				current: [
+					{
+						target: {
+							name: 'accalia'
+						},
+						voter: {
+							name: 'yamikuronue'
+						},
+						post: 123
+					}
+				]
+			};
+			
+			
+			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
+			sandbox.stub(mafiaDAO, 'getCurrentDay').resolves(42);
+			sandbox.stub(mafiaDAO, 'getNumToLynch').resolves(69);
+			sandbox.stub(mafiaDAO, 'getAllVotesForDaySorted').resolves(votes);
+			sandbox.stub(mafiaDAO, 'getLivingPlayers').resolves(players);
+			const fakeTemplate = sandbox.stub().returns('Some string output');
+			sandbox.stub(Handlebars, 'compile').returns(fakeTemplate);
+			
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: ['dreikin']
+			};
+			
+			return mafia.listVotesHandler(command).then(() => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+				
+				fakeTemplate.called.should.be.true;
+				const dataSent = fakeTemplate.getCall(0).args[0];
+
+				dataSent.votes.accalia.names.length.should.equal(1);
+				dataSent.votes.accalia.names.should.include({
+						voter: 'yamikuronue',
+						retracted: false,
+						post: 123,
+						game: 12345
+				});
+				dataSent.votes.tehNinja.names.length.should.equal(1);
+				dataSent.votes.tehNinja.names.should.include({
+						voter: 'yamikuronue',
+						retracted: true,
+						post: 121,
+						game: 12345
+				});
+			});
+		});
+		
+		it('should not output the unvote hack', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				}
+			};
+			
+			const players = [
+				{player: {'name': 'yamikuronue'}, 'playerStatus': 'alive'},
+				{player: {'name': 'accalia'}, 'playerStatus': 'alive'}
+			];
+
+			
+			const votes = {
+				old: [
+					{
+						target: {
+							name: 'tehNinja'
+						},
+						voter: {
+							name: 'yamikuronue'
+						},
+						post: 121
+					},
+					{
+						target: {
+							name: 'unvote'
+						},
+						voter: {
+							name: 'yamikuronue'
+						},
+						post: 122
+					}
+				],
+				current: [
+					{
+						target: {
+							name: 'accalia'
+						},
+						voter: {
+							name: 'yamikuronue'
+						},
+						post: 123
+					},
+					{
+						target: {
+							name: 'noLynch'
+						},
+						voter: {
+							name: 'accalia'
+						},
+						post: 125
+					}
+				]
+			};
+			
+			
+			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
+			sandbox.stub(mafiaDAO, 'getCurrentDay').resolves(42);
+			sandbox.stub(mafiaDAO, 'getNumToLynch').resolves(69);
+			sandbox.stub(mafiaDAO, 'getAllVotesForDaySorted').resolves(votes);
+			sandbox.stub(mafiaDAO, 'getLivingPlayers').resolves(players);
+			const fakeTemplate = sandbox.stub().returns('Some string output');
+			sandbox.stub(Handlebars, 'compile').returns(fakeTemplate);
+			
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: ['dreikin']
+			};
+			
+			return mafia.listVotesHandler(command).then(() => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+				
+				fakeTemplate.called.should.be.true;
+				const dataSent = fakeTemplate.getCall(0).args[0];
+
+				dataSent.votes.accalia.names.length.should.equal(1);
+				dataSent.votes.accalia.names.should.include({
+						voter: 'yamikuronue',
+						retracted: false,
+						post: 123,
+						game: 12345
+				});
+				dataSent.votes.tehNinja.names.length.should.equal(1);
+				dataSent.votes.tehNinja.names.should.include({
+						voter: 'yamikuronue',
+						retracted: true,
+						post: 121,
+						game: 12345
+				});
+			});
+		});
+	});
+	
+	describe('kill()', () => {
+		it('Should reject non-mods', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				},
+				args: [
+					'yamikuronue'
+				]
+			};
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
+			sandbox.stub(mafiaDAO, 'getGameId').resolves(1);
+			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(false);
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
+			sandbox.stub(mafiaDAO, 'isPlayerAlive').resolves(true);
+			sandbox.stub(mafiaDAO, 'killPlayer').resolves();
+			
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: ['dreikin'],
+				name: 'testMafia'
+			};
+			
+			return mafia.killHandler(command).then( () => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('Error killing player: Poster is not mod');
+			});
+		});
+		
+		it('Should not kill dead players', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				},
+				args: [
+					'accalia'
+				]
+			};
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
+			sandbox.stub(mafiaDAO, 'getGameId').resolves(1);
+			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(true);
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
+			sandbox.stub(mafiaDAO, 'isPlayerAlive').resolves(false);
+			sandbox.stub(mafiaDAO, 'killPlayer').resolves();
+			
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: ['dreikin'],
+				name: 'testMafia'
+			};
+			
+			return mafia.killHandler(command).then( () => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+
+				mafiaDAO.killPlayer.called.should.be.false;
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('Error killing player: Target not alive');
+			});
+		});
+		
+		it('Should not kill players not in the game', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				},
+				args: [
+					'RaceProUK'
+				]
+			};
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
+			sandbox.stub(mafiaDAO, 'getGameId').resolves(1);
+			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(true);
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(false);
+			sandbox.stub(mafiaDAO, 'isPlayerAlive').resolves(true);
+			sandbox.stub(mafiaDAO, 'killPlayer').resolves();
+			
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: ['dreikin'],
+				name: 'testMafia'
+			};
+			
+			return mafia.killHandler(command).then( () => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+
+				mafiaDAO.killPlayer.called.should.be.false;
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('Error killing player: Target not in game');
+			});
+		});
+		
+		it('Should report errors', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				},
+				args: [
+					'yamikuronue'
+				]
+			};
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
+			sandbox.stub(mafiaDAO, 'getGameId').resolves(1);
+			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(true);
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
+			sandbox.stub(mafiaDAO, 'isPlayerAlive').resolves(true);
+			sandbox.stub(mafiaDAO, 'killPlayer').rejects('an error occurred');
+			
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: ['dreikin'],
+				name: 'testMafia'
+			};
+			
+			return mafia.killHandler(command).then( () => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+
+				mafiaDAO.killPlayer.called.should.be.true;
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('Error killing player: Error: an error occurred');
+			});
+		});
+		
+		it('Should kill players', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				},
+				args: [
+					'yamikuronue'
+				]
+			};
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
+			sandbox.stub(mafiaDAO, 'getGameId').resolves(1);
+			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(true);
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
+			sandbox.stub(mafiaDAO, 'isPlayerAlive').resolves(true);
+			sandbox.stub(mafiaDAO, 'killPlayer').resolves();
+			
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: ['dreikin'],
+				name: 'testMafia'
+			};
+			
+			return mafia.killHandler(command).then( () => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+
+				mafiaDAO.killPlayer.called.should.be.true;
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('Killed @yamikuronue in game testMafia');
+			});
+		});
+	});
+	
+	describe('new-day()', () => {
+		it('Should reject non-mods', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				}
+			};
+			const players = [
+				{player: {'name': 'yamikuronue'}, 'playerStatus': 'alive'},
+				{player: {'name': 'accalia'}, 'playerStatus': 'alive'}
+			];
+
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
+			sandbox.stub(mafiaDAO, 'getGameId').resolves(1);
+			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(false);
+			sandbox.stub(mafiaDAO, 'incrementDay').resolves(2);
+			sandbox.stub(mafiaDAO, 'setCurrentTime').resolves();
+			sandbox.stub(mafiaDAO, 'getNumToLynch').resolves(54);
+			sandbox.stub(mafiaDAO, 'getLivingPlayers').resolves(players);
+			
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: ['dreikin'],
+				name: 'testMafia'
+			};
+			
+			return mafia.dayHandler(command).then( () => {
+				//Game actions
+				mafiaDAO.incrementDay.called.should.not.be.true;
+				mafiaDAO.setCurrentTime.called.should.not.be.true;
+				
+				//Output back to mod
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+				const modOutput = browser.createPost.getCall(0).args[2];
+				modOutput.should.include('Error incrementing day: Poster is not mod');
+				
+				//Output to game
+				browser.createPost.calledWith(1, command.post.post_number).should.not.be.true;
+
+			});
+		});
+		
+		it('Should reject non-existant game', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				}
+			};
+			const players = [
+				{player: {'name': 'yamikuronue'}, 'playerStatus': 'alive'},
+				{player: {'name': 'accalia'}, 'playerStatus': 'alive'}
+			];
+
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').rejects('Game does not exist');
+			sandbox.stub(mafiaDAO, 'getGameId').rejects('No such game');
+			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(true);
+			sandbox.stub(mafiaDAO, 'incrementDay').resolves(2);
+			sandbox.stub(mafiaDAO, 'setCurrentTime').resolves();
+			sandbox.stub(mafiaDAO, 'getNumToLynch').resolves(54);
+			sandbox.stub(mafiaDAO, 'getLivingPlayers').resolves(players);
+			
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: ['dreikin'],
+				name: 'testMafia'
+			};
+			
+			return mafia.dayHandler(command).then( () => {
+				//Game actions
+				mafiaDAO.incrementDay.called.should.not.be.true;
+				mafiaDAO.setCurrentTime.called.should.not.be.true;
+				
+				//Output back to mod
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+				const modOutput = browser.createPost.getCall(0).args[2];
+				modOutput.should.include('Error incrementing day: Error: Game does not exist');
+				
+				//Output to game
+				browser.createPost.calledWith(1, command.post.post_number).should.not.be.true;
+
+			});
+		});
+		
+		it('Should move the day along', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				}
+			};
+			const players = [
+				{player: {'name': 'yamikuronue', properName: 'yamikuronue'}, 'playerStatus': 'alive'},
+				{player: {'name': 'accalia', properName: 'accalia'}, 'playerStatus': 'alive'}
+			];
+
+			const game = {
+				day: 2,
+				name: 'testMafia'
+			};
+
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
+			sandbox.stub(mafiaDAO, 'getGameById').resolves(game);
+			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(true);
+			sandbox.stub(mafiaDAO, 'incrementDay').resolves(2);
+			sandbox.stub(mafiaDAO, 'setCurrentTime').resolves();
+			sandbox.stub(mafiaDAO, 'getNumToLynch').resolves(54);
+			sandbox.stub(mafiaDAO, 'getLivingPlayers').resolves(players);
+			const fakeTemplate = sandbox.stub().returns('Some string output');
+			sandbox.stub(Handlebars, 'compile').returns(fakeTemplate);
+			
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: ['dreikin'],
+				name: 'testMafia'
+			};
+			
+			return mafia.dayHandler(command).then( () => {
+				//Actions
+				mafiaDAO.incrementDay.called.should.be.true;
+				mafiaDAO.setCurrentTime.called.should.be.true;
+				
+				//Output back to mod
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+				const modOutput = browser.createPost.getCall(0).args[2];
+				modOutput.should.include('Incremented day for testMafia');
+				
+				//Output to game
+				browser.createPost.calledWith(12345, command.post.post_number).should.be.true;
+				browser.createPost.getCall(1).args[2].should.include('Some string output');
+				
+				fakeTemplate.called.should.be.true;
+				const gameOutputData = fakeTemplate.getCall(0).args[0];
+				gameOutputData.toExecute.should.equal(54);
+				gameOutputData.numPlayers.should.equal(2);
+				gameOutputData.names.should.include('accalia');
+				gameOutputData.names.should.include('yamikuronue');
+				gameOutputData.names.length.should.equal(2);
 			});
 		});
 	});

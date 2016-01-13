@@ -16,6 +16,16 @@ Handlebars.registerHelper('voteChart', require('./templates/helpers/voteChart'))
 Handlebars.registerHelper('listNames', require('./templates/helpers/listNames'));
 const Promise = require('bluebird');
 
+
+const internals = {
+	browser: null,
+	configuration: exports.defaultConfig,
+	timeouts: {},
+	interval: null,
+	events: null
+};
+exports.internals = internals;
+
 const unvoteNicks = ['unvote', 'no-lynch', 'nolynch'];
 
 /*eslint-disable no-extend-native*/
@@ -23,7 +33,40 @@ Array.prototype.contains = function(element){
     return this.indexOf(element) > -1;
 };
 /*eslint-enable no-extend-native*/
+function mustBeTrue(check, args, error) {
+	return check.apply(null, args).then((result) => {
+		if (result) {
+			return Promise.resolve();
+		} else {
+			return Promise.reject(error);
+		}
+	});
+}
 
+function mustBeFalse(check, args, error) {
+	return check.apply(null, args).then((result) => {
+		if (!result) {
+			return Promise.resolve();
+		} else {
+			return Promise.reject(error);
+		}
+	});
+}
+
+function isDaytime(game) {
+	return dao.getCurrentTime(game).then((time) => {
+		return time === dao.gameTime.day;
+	});
+}
+
+function reportError (command, preface, error) {
+	internals.browser.createPost(
+		command.post.topic_id,
+		command.post.post_number,
+		'' + preface + error,
+		() => 0
+	);
+}
 /*Fisher-Yates, from SO*/
 function shuffle(array) {
   let currentIndex = array.length, temporaryValue, randomIndex;
@@ -44,14 +87,6 @@ function shuffle(array) {
   return array;
 }
 
-const internals = {
-	browser: null,
-	configuration: exports.defaultConfig,
-	timeouts: {},
-	interval: null,
-	events: null
-};
-exports.internals = internals;
 
 /**
  * Default plugin configuration
@@ -118,6 +153,31 @@ function lynchPlayer(game, target) {
 	});
 };
 
+exports.startHandler = function (command) {
+	const game = command.post.topic_id;
+	const mod = command.post.username;
+	
+	return dao.getGameStatus(game)
+		.then((status) => {
+			if (status === dao.gameStatus.prep) {
+				return Promise.resolve();
+			}
+			if (status === dao.gameStatus.auto) {
+				return Promise.reject('Game not in prep phase. Try `!prepare`.');
+			}
+			return Promise.reject('Game already ' + status);
+		})
+		.then(() => mustBeTrue(dao.isPlayerMod, [game, mod], 'Poster is not mod'))
+		.then(() => dao.setGameStatus(game, dao.gameStatus.running))
+		.then(() => dao.incrementDay(game))
+		.then(() => dao.setCurrentTime(game, dao.gameTime.day))
+		.then(() => {
+			const text = 'Game begin!';
+			internals.browser.createPost(game, command.post.post_number, text, () => 0);
+		})
+		.catch((err) => reportError(command, 'Error when starting game: ', err));
+};
+
 exports.voteHandler = function voteHandler(command) {
 	const game = command.post.topic_id;
 	const post = command.post.post_number;
@@ -137,7 +197,13 @@ exports.voteHandler = function voteHandler(command) {
 			if (!isAlive) {
 				return Promise.reject('Voter not alive');
 			}
-			return dao.isPlayerInGame(game, target);
+		})
+		.then(() => mustBeTrue(dao.isPlayerAlive, [game, target], 'Target is not alive'))
+		.then(() => dao.killPlayer(game, target))
+		.then(() => dao.getGameById(game))
+		.then((gameInstance) => {
+			const text = 'Killed @' + target + ' in game ' + gameInstance.name;
+			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
 		})
 		.then((inGame) => {
 			if (!inGame && !unvoteNicks.contains(target)) {
@@ -219,11 +285,11 @@ exports.startHandler = function startHandler(command) {
 	const player = command.post.username;
 	const gameName = command.args[0];
 	
-	const reportError = (error) => {
+	/*const reportError = (error) => {
 		internals.browser.createPost(command.post.topic_id,
 									command.post.post_number,
 									'Error when starting game: ' + error, () => 0);
-	};
+	};*/
 	
 	return dao.createGame(id, gameName, player)
 	.then(() => {
@@ -240,11 +306,11 @@ exports.joinHandler = function joinHandler(command) {
 	const id = command.post.topic_id;
 	const player = command.post.username;
 	
-	const reportError = (error) => {
+	/*const reportError = (error) => {
 		internals.browser.createPost(command.post.topic_id,
 									command.post.post_number,
 									'Error when adding to game: ' + error, () => 0);
-	};
+	};*/
 	
 	return dao.ensureGameExists(id)
 	.then(() => dao.isPlayerInGame(id, player.toLowerCase()))
@@ -449,11 +515,11 @@ exports.listAllVotesHandler = function listAllVotesHandler(command) {};
 
 exports.listPlayersHandler = function listPlayersHandler(command) {
 	const id = command.post.topic_id;
-	const reportError = (error) => {
+/*	const reportError = (error) => {
 		internals.browser.createPost(command.post.topic_id,
 			command.post.post_number,
 			'Error resolving list: ' + error, () => 0);
-	};
+	};*/
 	return dao.ensureGameExists(id)
 		.then(() => dao.getPlayers(id))
 		.then( (rows) => {
@@ -496,11 +562,11 @@ exports.listPlayersHandler = function listPlayersHandler(command) {
 
 exports.listAllPlayersHandler = function listAllPlayersHandler(command) {
 	const id = command.post.topic_id;
-	const reportError = (error) => {
+	/*const reportError = (error) => {
 		internals.browser.createPost(command.post.topic_id,
 									command.post.post_number,
 									'Error resolving list: ' + error, () => 0);
-	};
+	};*/
 	return dao.ensureGameExists(id)
 	.then(() => dao.getPlayers(id))
 	.then( (rows) => {
@@ -614,11 +680,27 @@ exports.prepare = function prepare(plugConfig, config, events, browser) {
 	if (plugConfig === null || typeof plugConfig !== 'object') {
 		plugConfig = {};
 	}
+	if (plugConfig.players) {
+		plugConfig.players.concat(unvoteNicks);
+	}
 	internals.events = events;
 	internals.browser = browser;
 	internals.configuration = config.mergeObjects(true, exports.defaultConfig, plugConfig);
-	dao.createDB(internals.configuration)
-		.then(() => dao.ensureGameExists(plugConfig.thread))
+		
+	return dao.createDB(internals.configuration)
+		.then(() => {
+			if (plugConfig.thread) {
+				return createPluginGame(plugConfig);
+			}
+		})	
+		.then(() => {
+			events.onNotification('mentioned', exports.mentionHandler);
+			registerCommands(events);
+		});
+};
+
+function createPluginGame(plugConfig) {
+	return dao.ensureGameExists(plugConfig.thread)
 		.catch((reason) => {
 			if (reason === 'Game does not exist') {
 				return dao.createGame(plugConfig.thread, plugConfig.name);
@@ -628,9 +710,7 @@ exports.prepare = function prepare(plugConfig, config, events, browser) {
 				return Promise.reject('Game not created');
 			}
 		})
-		.then(() => registerPlayers(plugConfig.thread, plugConfig.players.concat(unvoteNicks)));
-	events.onNotification('mentioned', exports.mentionHandler);
-	registerCommands(events);
+		.then(() => registerPlayers(plugConfig.thread, plugConfig.players));
 };
 /*eslint-enable no-console*/
 
