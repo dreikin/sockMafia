@@ -471,6 +471,8 @@ exports.unvoteHandler = function (command) {
   * Game rules:
   *  - A vote can only be registered by a player in the game
   *  - A vote can only be registered by a living player
+  *  - A vote can only be registered for a player in the game
+  *  - A vote cna only be registered for a living player
   *  - If a simple majority of players vote for a single player:
   *    - The game enters the night phase
   *    - That player's information is revealed
@@ -493,6 +495,13 @@ exports.voteHandler = function (command) {
 	}
 	
 	return dao.ensureGameExists(game)
+		.then( () => dao.getGameStatus(game))
+		.then((status) => {
+			if (status === dao.gameStatus.running) {
+				return Promise.resolve();
+			}
+			return Promise.reject('Game already ' + status);
+		})
 		.then(() => {
 			return Promise.all([
 				mustBeTrue(dao.isPlayerInGame, [game, voter], 'Voter not in game'),
@@ -609,6 +618,13 @@ exports.joinHandler = function (command) {
 	const player = command.post.username;
 	
 	return dao.ensureGameExists(id)
+		.then(() => dao.getGameStatus(id))
+		.then((status) => {
+			if (status === dao.gameStatus.prep) {
+				return Promise.resolve();
+			}
+			return Promise.reject('Cannot join game in progress.');
+		})
 		.then(() => mustBeFalse(dao.isPlayerInGame, [id, player], 'You are already in this game, @' + player + '!'))
 		.then(() => dao.addPlayerToGame(id, player.toLowerCase()))
 		.then(() => internals.browser.createPost(id, post, 'Welcome to the game, @' + player, () => 0))
