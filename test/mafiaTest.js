@@ -674,25 +674,26 @@ describe('mafia', () => {
 			};
 			
 			const players = [
-				{player: {'name': 'yamikuronue'}, 'playerStatus': 'alive'},
-				{player: {'name': 'accalia'}, 'playerStatus': 'alive'}
+				{player: {'name': 'yamikuronue', properName: 'Yamikuronue'}, 'playerStatus': 'alive'},
+				{player: {'name': 'accalia', properName: 'accalia'}, 'playerStatus': 'alive'}
 			];
 
 			
-			const votes = {
-				old: [],
-				current: [
-					{
-						target: {
-							name: 'accalia'
-						},
-						voter: {
-							name: 'yamikuronue'
-						},
-						post: 123
-					}
-				]
-			};
+			const votes = [
+				{
+					target: {
+						name: 'accalia',
+						properName: 'accalia'
+					},
+					voter: {
+						name: 'yamikuronue',
+						properName: 'Yamikuronue'
+					},
+					post: 123,
+					isCurrent: true,
+					rescindedAt: null
+				}
+			];
 			
 			
 			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
@@ -716,12 +717,13 @@ describe('mafia', () => {
 				
 				dataSent.numPlayers.should.equal(2);
 				dataSent.notVoting.should.include('accalia');
-				dataSent.notVoting.should.not.include('yamikuronue');
+				dataSent.notVoting.should.not.include('Yamikuronue');
 				dataSent.numNotVoting.should.equal(1);
 				dataSent.votes.accalia.names.length.should.equal(1);
 				dataSent.votes.accalia.names.should.include({
-						voter: 'yamikuronue',
+						voter: 'Yamikuronue',
 						retracted: false,
+						retractedAt: null,
 						post: 123,
 						game: 12345
 				});
@@ -738,35 +740,39 @@ describe('mafia', () => {
 			};
 			
 			const players = [
-				{player: {'name': 'yamikuronue'}, 'playerStatus': 'alive'},
-				{player: {'name': 'accalia'}, 'playerStatus': 'alive'}
+				{player: {'name': 'yamikuronue', properName: 'Yamikuronue'}, 'playerStatus': 'alive'},
+				{player: {'name': 'accalia', properName: 'accalia'}, 'playerStatus': 'alive'}
 			];
 
 			
-			const votes = {
-				old: [
-					{
-						target: {
-							name: 'tehNinja'
-						},
-						voter: {
-							name: 'yamikuronue'
-						},
-						post: 121
-					}
-				],
-				current: [
-					{
-						target: {
-							name: 'accalia'
-						},
-						voter: {
-							name: 'yamikuronue'
-						},
-						post: 123
-					}
-				]
-			};
+			const votes = [
+				{
+					target: {
+						name: 'tehninja',
+						properName: 'tehNinja'
+					},
+					voter: {
+						name: 'yamikuronue',
+						properName: 'Yamikuronue'
+					},
+					post: 121,
+					isCurrent: false,
+					rescindedAt: 123
+				},
+				{
+					target: {
+						name: 'accalia',
+						properName: 'accalia'
+					},
+					voter: {
+						name: 'yamikuronue',
+						properName: 'Yamikuronue'
+					},
+					post: 123,
+					isCurrent: true,
+					rescindedAt: null
+				}
+			];
 			
 			
 			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
@@ -790,15 +796,17 @@ describe('mafia', () => {
 
 				dataSent.votes.accalia.names.length.should.equal(1);
 				dataSent.votes.accalia.names.should.include({
-						voter: 'yamikuronue',
+						voter: 'Yamikuronue',
 						retracted: false,
+						retractedAt: null,
 						post: 123,
 						game: 12345
 				});
 				dataSent.votes.tehNinja.names.length.should.equal(1);
 				dataSent.votes.tehNinja.names.should.include({
-						voter: 'yamikuronue',
+						voter: 'Yamikuronue',
 						retracted: true,
+						retractedAt: 123,
 						post: 121,
 						game: 12345
 				});
@@ -815,53 +823,65 @@ describe('mafia', () => {
 			};
 			
 			const players = [
-				{player: {'name': 'yamikuronue'}, 'playerStatus': 'alive'},
-				{player: {'name': 'accalia'}, 'playerStatus': 'alive'}
+				{player: {'name': 'yamikuronue', properName: 'Yamikuronue'}, 'playerStatus': 'alive'},
+				{player: {'name': 'accalia', properName: 'accalia'}, 'playerStatus': 'alive'}
 			];
 
 			
-			const votes = {
-				old: [
-					{
-						target: {
-							name: 'tehNinja'
-						},
-						voter: {
-							name: 'yamikuronue'
-						},
-						post: 121
+			const votes = [
+				{
+					target: {
+						name: 'tehninja',
+						properName: 'tehNinja'
 					},
-					{
-						target: {
-							name: 'unvote'
-						},
-						voter: {
-							name: 'yamikuronue'
-						},
-						post: 122
-					}
-				],
-				current: [
-					{
-						target: {
-							name: 'accalia'
-						},
-						voter: {
-							name: 'yamikuronue'
-						},
-						post: 123
+					voter: {
+						name: 'yamikuronue',
+						properName: 'Yamikuronue'
 					},
-					{
-						target: {
-							name: 'noLynch'
-						},
-						voter: {
-							name: 'accalia'
-						},
-						post: 125
-					}
-				]
-			};
+					post: 121,
+					isCurrent: false,
+					rescindedAt: 122
+				},
+				{
+					target: {
+						name: 'unvote',
+						properName: 'unvote'
+					},
+					voter: {
+						name: 'yamikuronue',
+						properName: 'Yamikuronue'
+					},
+					post: 122,
+					isCurrent: false,
+					rescindedAt: 123
+				},
+				{
+					target: {
+						name: 'accalia',
+						properName: 'accalia'
+					},
+					voter: {
+						name: 'yamikuronue',
+						properName: 'Yamikuronue'
+					},
+					post: 123,
+					isCurrent: true,
+					rescindedAt: null
+				},
+				{
+					target: {
+						name: 'nolynch',
+						properName: 'noLynch'
+					},
+					voter: {
+						name: 'accalia',
+						properName: 'accalia'
+					},
+					post: 125,
+					isCurrent: true,
+					rescindedAt: null
+				}
+			];
 			
 			
 			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
@@ -885,15 +905,17 @@ describe('mafia', () => {
 
 				dataSent.votes.accalia.names.length.should.equal(1);
 				dataSent.votes.accalia.names.should.include({
-						voter: 'yamikuronue',
+						voter: 'Yamikuronue',
 						retracted: false,
+						retractedAt: null,
 						post: 123,
 						game: 12345
 				});
 				dataSent.votes.tehNinja.names.length.should.equal(1);
 				dataSent.votes.tehNinja.names.should.include({
-						voter: 'yamikuronue',
+						voter: 'Yamikuronue',
 						retracted: true,
+						retractedAt: 122,
 						post: 121,
 						game: 12345
 				});
