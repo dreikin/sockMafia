@@ -147,8 +147,7 @@ function shuffle(array) {
 	return array;
 }
 
-function registerCommands(events) {
-	events.onCommand('echo', 'echo a bunch of post info (for diagnostic purposes)', exports.echoHandler, () => 0);
+function registerPlayerCommands(events) {
 	events.onCommand('for', 'vote for a player to be executed', exports.voteHandler, () => 0);
 	events.onCommand('join', 'join current mafia game', exports.joinHandler, () => 0);
 	events.onCommand('list-all-players', 'list all players, dead and alive', exports.listAllPlayersHandler, () => 0);
@@ -159,13 +158,20 @@ function registerCommands(events) {
 	events.onCommand('nolynch', 'vote for noone to be lynched', exports.nolynchHandler, () => 0);
 	events.onCommand('unvote', 'rescind your vote', exports.unvoteHandler, () => 0);
 	events.onCommand('vote', 'vote for a player to be executed (alt. form)', exports.voteHandler, () => 0);
+}
 
-	/*Mod commands*/
+function registerModCommands(events) {
 	events.onCommand('prepare', 'Start a new game', exports.prepHandler, () => 0);
-	events.onCommand('start', 'move a game from the prep phase into active play (mod only)', exports.startHandler, () => 0);
+	events.onCommand('start', 'move a game into active play (mod only)', exports.startHandler, () => 0);
 	events.onCommand('new-day', 'move on to a new day (mod only)', exports.dayHandler, () => 0);
 	events.onCommand('kill', 'kill a player (mod only)', exports.killHandler, () => 0);
 	events.onCommand('end', 'end the game (mod only)', exports.finishHandler, () => 0);
+}
+
+function registerCommands(events) {
+	events.onCommand('echo', 'echo a bunch of post info (for diagnostic purposes)', exports.echoHandler, () => 0);
+	registerPlayerCommands(events);
+	registerModCommands(events);
 }
 
 /**
@@ -196,6 +202,17 @@ function registerPlayers(game, players) {
 
 // Mod commands
  
+ /**
+  * Prepare: A mod function that starts a new game in the Prep phase.
+  * Must be used in the game thread. The user becomes the mod.
+  * Game rules:
+  *  - A new game can only be started in a thread that does not already have a game
+  *
+  * @example !prepare gameName
+  *
+  * @param  {commands.command} command The command that was passed in.
+  * @returns {Promise}        A promise that will resolve when the game is ready
+  */
 exports.prepHandler = function (command) {
 	const id = command.post.topic_id;
 	const player = command.post.username;
@@ -221,6 +238,20 @@ exports.prepHandler = function (command) {
 		});
 };
 
+ /**
+  * Start: A mod function that starts day 1 of a game
+  * Must be used in the game thread.
+  *
+  * Game rules:
+  *  - A game can only be started if it is in the prep phase
+  *  - A game can only be started by the mod
+  *  - When the game starts, it starts on Daytime of Day 1
+  *
+  * @example !start
+  *
+  * @param  {commands.command} command The command that was passed in.
+  * @returns {Promise}        A promise that will resolve when the game is ready
+  */
 exports.startHandler = function (command) {
 	const game = command.post.topic_id;
 	const mod = command.post.username;
@@ -242,6 +273,22 @@ exports.startHandler = function (command) {
 		.catch((err) => reportError(command, 'Error when starting game: ', err));
 };
 
+ /**
+  * New-day: A mod function that starts a new day
+  * Must be used in the game thread.
+  *
+  * Game rules:
+  *  - A game can only advance to day when it is in the night phase
+  *  - A game can only be advanced by the mod
+  *  - When a new day starts, the vote counts from the previous day are reset
+  *  - When a new day starts, the list of players is output for convenience
+  *  - When a new day starts, the "to-lynch" count is output for convenience
+  *
+  * @example !new-day
+  *
+  * @param  {commands.command} command The command that was passed in.
+  * @returns {Promise}        A promise that will resolve when the game is ready
+  */
 exports.dayHandler = function (command) {
 	const game = command.post.topic_id;
 	const mod = command.post.username;
@@ -291,6 +338,20 @@ exports.dayHandler = function (command) {
 		.catch((err) => reportError(command, 'Error incrementing day: ', err));
 };
 
+ /**
+  * Kill: A mod function that modkills or nightkills a player.
+  * Must be used in the game thread.
+  *
+  * Game rules:
+  *  - A player can only be killed if they are already in the game.
+  *  - A player can only be killed if they are alive.
+  *  - A player can only be !killed by the mod.
+  *
+  * @example !kill playerName
+  *
+  * @param  {commands.command} command The command that was passed in.
+  * @returns {Promise}        A promise that will resolve when the game is ready
+  */
 exports.killHandler = function (command) {
 	const game = command.post.topic_id;
 	const mod = command.post.username;
@@ -317,6 +378,20 @@ exports.killHandler = function (command) {
 		.catch((err) => reportError(command, 'Error killing player: ', err));
 };
 
+ /**
+  * End: A mod function that ends the game
+  * Must be used in the game thread.
+  *
+  * Game rules:
+  *  - A game can only be ended if it is running
+  *  - A game can only be ended by the mod
+  *  - When the game ends, surviving players are listed for convenience
+  *
+  * @example !end
+  *
+  * @param  {commands.command} command The command that was passed in.
+  * @returns {Promise}        A promise that will resolve when the game is ready
+  */
 exports.finishHandler = function (command) {
 	const game = command.post.topic_id;
 	const mod = command.post.username;
@@ -341,12 +416,40 @@ exports.finishHandler = function (command) {
 
 // Player commands
 
+/**
+  * nolynch: Vote to not lynch this day
+  * Must be used in the game thread.
+  *
+  * Game rules:
+  *  - A vote can only be registered by a player in the game
+  *  - A vote can only be registered by a living player
+  *  - If a simple majority of players vote for no lynch:
+  *    - The game enters the night phase
+  *    - No information is revealed
+  *
+  * @example !nolynch
+  *
+  * @param  {commands.command} command The command that was passed in.
+  * @returns {Promise}        A promise that will resolve when the game is ready
+  */
 exports.nolynchHandler = function (command) {
 	command.input = '!vote for nolynch';
 	command.args[0] = 'nolynch';
 	return exports.voteHandler(command);
 };
 
+/**
+  * unvote: Rescind previous vote without registering a new vote
+  * Must be used in the game thread.
+  *
+  * Game rules:
+  *  - An unvote can only occur if a vote has previously occurred
+  *
+  * @example !unvote
+  *
+  * @param  {commands.command} command The command that was passed in.
+  * @returns {Promise}        A promise that will resolve when the game is ready
+  */
 exports.unvoteHandler = function (command) {
 	command.input = '!vote for unvote';
 	command.args[0] = 'unvote';
@@ -354,6 +457,23 @@ exports.unvoteHandler = function (command) {
 
 };
 
+/**
+  * Vote: Vote to lynch a player
+  * Must be used in the game thread. Expects one argument
+  *
+  * Game rules:
+  *  - A vote can only be registered by a player in the game
+  *  - A vote can only be registered by a living player
+  *  - If a simple majority of players vote for a single player:
+  *    - The game enters the night phase
+  *    - That player's information is revealed
+  *
+  * @example !vote playerName
+  * @example !for playerName
+  *
+  * @param  {commands.command} command The command that was passed in.
+  * @returns {Promise}        A promise that will resolve when the game is ready
+  */
 exports.voteHandler = function (command) {
 	const game = command.post.topic_id;
 	const post = command.post.post_number;
@@ -444,6 +564,13 @@ exports.voteHandler = function (command) {
 
 // Open commands
 
+/**
+  * Echo: Echo diagnostic information
+  * @example !echo
+  *
+  * @param  {commands.command} command The command that was passed in.
+  * @returns {Promise}        A promise that will resolve when the game is ready
+  */
 exports.echoHandler = function (command) {
 	const text = 'topic: ' + command.post.topic_id + '\n'
 		+ 'post: ' + command.post.post_number + '\n'
@@ -456,6 +583,19 @@ exports.echoHandler = function (command) {
 	return Promise.resolve();
 };
 
+/**
+  * Join: Join a game
+  * Must be used in the game thread.
+  *
+  * Game rules:
+  *  - A player can only join a game that is in the Prep phase
+  *  - A player can only join a game they are not already playing
+  *
+  * @example !join
+  *
+  * @param  {commands.command} command The command that was passed in.
+  * @returns {Promise}        A promise that will resolve when the game is ready
+  */
 exports.joinHandler = function (command) {
 	const id = command.post.topic_id;
 	const post = command.post.post_number;
@@ -468,6 +608,18 @@ exports.joinHandler = function (command) {
 		.catch((err) => reportError(command, 'Error when adding to game: ', err));
 };
 
+/**
+  * List-players: List living players in the game
+  * Must be used in the game thread.
+  *
+  * Game rules:
+  *  - Only living players are included in this list
+  *
+  * @example !list-players
+  *
+  * @param  {commands.command} command The command that was passed in.
+  * @returns {Promise}        A promise that will resolve when the game is ready
+  */
 exports.listPlayersHandler = function (command) {
 	const id = command.post.topic_id;
 
@@ -513,6 +665,19 @@ exports.listPlayersHandler = function (command) {
 		}).catch((err) => reportError(command, 'Error resolving list: ', err));
 };
 
+/**
+  * List-all-players: List all players in the game
+  * Must be used in the game thread.
+  *
+  * Game rules:
+  *  - All players are included in this list
+  *  - Player status must be indicated
+  *
+  * @example !list-all-players
+  *
+  * @param  {commands.command} command The command that was passed in.
+  * @returns {Promise}        A promise that will resolve when the game is ready
+  */
 exports.listAllPlayersHandler = function (command) {
 	const id = command.post.topic_id;
 
@@ -573,6 +738,23 @@ exports.listAllPlayersHandler = function (command) {
 	}).catch((err) => reportError(command, 'Error resolving list: ', err));
 };
 
+/**
+  * List-votes: List votes for the current day
+  * Must be used in the game thread.
+  *
+  * Game rules:
+  *  - All votes must be included in this list, including rescinded votes
+  *  - Rescinded votes must be indicated as such with a strikethrough
+  *  - The post in which a vote was registered must be linked
+  *  - The post in which a rescinded vote was rescinded must be linked
+  *  - Votes must include the name of the voter
+  *  - Only votes for the current day number shall be listed
+  *
+  * @example !list-votes
+  *
+  * @param  {commands.command} command The command that was passed in.
+  * @returns {Promise}        A promise that will resolve when the game is ready
+  */
 exports.listVotesHandler = function (command) {
 	const data = {
 		day: 0,
@@ -659,7 +841,26 @@ exports.listVotesHandler = function (command) {
 		});
 };
 
-exports.listAllVotesHandler = function (command) {};
+/**
+  * List-all-votes: List votes since the beginning of the thread
+  * Must be used in the game thread.
+  *
+  * Game rules:
+  *  - All votes must be included in this list, including rescinded votes
+  *  - Rescinded votes must be indicated as such with a strikethrough
+  *  - The post in which a vote was registered must be linked
+  *  - The post in which a rescinded vote was rescinded must be linked
+  *  - Votes must include the name of the voter
+  *  - Votes must be segregated by day
+  *
+  * @example !list-all-votes
+  *
+  * @param  {commands.command} command The command that was passed in.
+  * @returns {Promise}        A promise that will resolve when the game is ready
+  */
+exports.listAllVotesHandler = function (command) {
+	return Promise.resolve();
+};
 
 // Required exports
 
