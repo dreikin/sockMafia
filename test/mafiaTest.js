@@ -476,8 +476,8 @@ describe('mafia', () => {
 			};
 			
 			const players = [
-				{player: {'name': 'yamikuronue'}, 'playerStatus': 'alive'},
-				{player: {'name': 'accalia'}, 'playerStatus': 'dead'}
+				{player: {'name': 'yamikuronue', properName: 'Yamikuronue'}, 'playerStatus': 'alive'},
+				{player: {'name': 'accalia', properName: 'accalia'}, 'playerStatus': 'dead'}
 			];
 
 
@@ -493,7 +493,7 @@ describe('mafia', () => {
 				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
 				
 				const output = browser.createPost.getCall(0).args[2];
-				output.should.include('yamikuronue');
+				output.should.include('Yamikuronue');
 				output.should.include('accalia');
 				output.should.include('dreikin');
 			});
@@ -510,8 +510,8 @@ describe('mafia', () => {
 			};
 			
 			const players = [
-				{player: {'name': 'yamikuronue'}, 'playerStatus': 'dead'},
-				{player: {'name': 'accalia'}, 'playerStatus': 'dead'}
+				{player: {'name': 'yamikuronue', properName: 'Yamikuronue'}, 'playerStatus': 'dead'},
+				{player: {'name': 'accalia', properName: 'accalia'}, 'playerStatus': 'dead'}
 			];
 
 
@@ -541,8 +541,8 @@ describe('mafia', () => {
 			};
 			
 			const players = [
-				{player: {'name': 'yamikuronue'}, 'playerStatus': 'alive'},
-				{player: {'name': 'accalia'}, 'playerStatus': 'alive'}
+				{player: {'name': 'yamikuronue', properName: 'Yamikuronue'}, 'playerStatus': 'alive'},
+				{player: {'name': 'accalia', properName: 'accalia'}, 'playerStatus': 'alive'}
 			];
 
 
@@ -572,8 +572,8 @@ describe('mafia', () => {
 			};
 			
 			const players = [
-				{player: {'name': 'yamikuronue'}, 'playerStatus': 'alive'},
-				{player: {'name': 'accalia'}, 'playerStatus': 'dead'}
+				{player: {'name': 'yamikuronue', properName: 'Yamikuronue'}, 'playerStatus': 'alive'},
+				{player: {'name': 'accalia', properName: 'accalia'}, 'playerStatus': 'dead'}
 			];
 
 
@@ -605,8 +605,8 @@ describe('mafia', () => {
 			};
 			
 			const players = [
-				{player: {'name': 'yamikuronue'}, 'playerStatus': 'alive'},
-				{player: {'name': 'accalia'}, 'playerStatus': 'dead'}
+				{player: {'name': 'yamikuronue', properName: 'Yamikuronue'}, 'playerStatus': 'alive'},
+				{player: {'name': 'accalia', properName: 'accalia'}, 'playerStatus': 'dead'}
 			];
 
 
@@ -622,7 +622,7 @@ describe('mafia', () => {
 				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
 				
 				const output = browser.createPost.getCall(0).args[2];
-				output.should.include('yamikuronue');
+				output.should.include('Yamikuronue');
 				output.should.not.include('accalia');
 				output.should.include('dreikin');
 			});
