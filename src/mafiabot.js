@@ -306,6 +306,8 @@ exports.killHandler = function (command) {
 			return Promise.reject('Game not started. Try `!start`.');
 		})
 		.then(() => mustBeTrue(dao.isPlayerMod, [game, mod], 'Poster is not mod'))
+		.then(() => mustBeTrue(dao.isPlayerInGame, [game, target], 'Target not in game'))
+		.then(() => mustBeTrue(dao.isPlayerAlive, [game, target], 'Target not alive'))
 		.then(() => dao.killPlayer(game, target))
 		.then(() => dao.getGameById(game))
 		.then((gameInstance) => {
@@ -680,12 +682,12 @@ exports.prepare = function prepare(plugConfig, config, events, browser) {
 		plugConfig = {};
 	}
 	if (plugConfig.players) {
-		plugConfig.players.concat(unvoteNicks)
+		plugConfig.players.concat(unvoteNicks);
 	}
 	internals.events = events;
 	internals.browser = browser;
 	internals.configuration = config.mergeObjects(true, exports.defaultConfig, plugConfig);
-	dao.createDB(internals.configuration)
+	return dao.createDB(internals.configuration)
 		.then(() => dao.ensureGameExists(plugConfig.thread))
 		.catch((reason) => {
 			if (reason === 'Game does not exist') {
@@ -696,10 +698,19 @@ exports.prepare = function prepare(plugConfig, config, events, browser) {
 				return Promise.reject('Game not created');
 			}
 		})
-		.then(() => registerPlayers(plugConfig.thread, plugConfig.players))
+		.then(() => {
+			if (plugConfig.players) {
+				return registerPlayers(plugConfig.thread, plugConfig.players);
+			} else {
+				return Promise.resolve();
+			}
+		})
 		.then(() => {
 			registerCommands(events);
 		})
+		.catch((err) => {
+			console.log('ERROR! ' + err);
+		});
 };
 /*eslint-enable no-console*/
 

@@ -63,17 +63,16 @@ describe('mafia', () => {
 			};
 			sandbox.stub(mafiaDAO, 'createDB').resolves();
 			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
-			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
-			
-			mafia.prepare(null, fakeConfig, events, undefined);
-			commandSpy.calledWith('echo').should.be.true;
-			commandSpy.calledWith('for').should.be.true;
-			commandSpy.calledWith('join').should.be.true;
-			commandSpy.calledWith('list-all-players').should.be.true;
-			commandSpy.calledWith('list-players').should.be.true;
-			commandSpy.calledWith('list-votes').should.be.true;
-			commandSpy.calledWith('kill').should.be.true;
-			commandSpy.calledWith('new-day').should.be.true;
+
+			mafia.prepare(null, fakeConfig, events, undefined).then(() => {
+				commandSpy.calledWith('for').should.be.true;
+				commandSpy.calledWith('join').should.be.true;
+				commandSpy.calledWith('list-all-players').should.be.true;
+				commandSpy.calledWith('list-players').should.be.true;
+				commandSpy.calledWith('list-votes').should.be.true;
+				commandSpy.calledWith('kill').should.be.true;
+				commandSpy.calledWith('new-day').should.be.true;
+			});
 		});
 	});
 
@@ -880,11 +879,13 @@ describe('mafia', () => {
 			};
 
 			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
-			sandbox.stub(mafiaDAO, 'getGameId').resolves(1);
 			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(false);
 			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
 			sandbox.stub(mafiaDAO, 'isPlayerAlive').resolves(true);
 			sandbox.stub(mafiaDAO, 'killPlayer').resolves();
+			sandbox.stub(mafiaDAO, 'getGameById').resolves({
+				name: 'testMafia'
+			});
 			
 			mafia.internals.browser = browser;
 			mafia.internals.configuration = {
@@ -913,11 +914,13 @@ describe('mafia', () => {
 			};
 
 			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
-			sandbox.stub(mafiaDAO, 'getGameId').resolves(1);
 			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(true);
 			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
 			sandbox.stub(mafiaDAO, 'isPlayerAlive').resolves(false);
 			sandbox.stub(mafiaDAO, 'killPlayer').resolves();
+			sandbox.stub(mafiaDAO, 'getGameById').resolves({
+				name: 'testMafia'
+			});
 			
 			mafia.internals.browser = browser;
 			mafia.internals.configuration = {
@@ -947,11 +950,13 @@ describe('mafia', () => {
 			};
 
 			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
-			sandbox.stub(mafiaDAO, 'getGameId').resolves(1);
 			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(true);
 			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(false);
 			sandbox.stub(mafiaDAO, 'isPlayerAlive').resolves(true);
 			sandbox.stub(mafiaDAO, 'killPlayer').resolves();
+			sandbox.stub(mafiaDAO, 'getGameById').resolves({
+				name: 'testMafia'
+			});
 			
 			mafia.internals.browser = browser;
 			mafia.internals.configuration = {
@@ -981,11 +986,14 @@ describe('mafia', () => {
 			};
 
 			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
-			sandbox.stub(mafiaDAO, 'getGameId').resolves(1);
 			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(true);
 			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
 			sandbox.stub(mafiaDAO, 'isPlayerAlive').resolves(true);
 			sandbox.stub(mafiaDAO, 'killPlayer').rejects('an error occurred');
+			sandbox.stub(mafiaDAO, 'getGameById').resolves({
+				name: 'testMafia'
+			});
+			
 			
 			mafia.internals.browser = browser;
 			mafia.internals.configuration = {
@@ -1015,11 +1023,13 @@ describe('mafia', () => {
 			};
 
 			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
-			sandbox.stub(mafiaDAO, 'getGameId').resolves(1);
 			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(true);
 			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
 			sandbox.stub(mafiaDAO, 'isPlayerAlive').resolves(true);
 			sandbox.stub(mafiaDAO, 'killPlayer').resolves();
+			sandbox.stub(mafiaDAO, 'getGameById').resolves({
+				name: 'testMafia'
+			});
 			
 			mafia.internals.browser = browser;
 			mafia.internals.configuration = {
