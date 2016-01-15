@@ -59,7 +59,7 @@ function createModel(config) {
 	// |- 1:N
 	player.hasMany(vote, {as: 'voter', foreignKey: 'voterId'});
 	player.hasMany(vote, {as: 'target', foreignKey: 'targetId'});
-	game.hasMany(vote);
+	game.hasMany(vote, {foreignKey: 'gameId'});
 	// game.hasMany(segment);
 	// |- M:N
 	player.belongsToMany(game, {through: roster});
