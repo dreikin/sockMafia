@@ -306,6 +306,13 @@ exports.dayHandler = function (command) {
 			}
 			return Promise.reject('Game not started. Try `!start`.');
 		})
+		.then(() => dao.getCurrentTime(game))
+		.then((time) => {
+			if (time === dao.gameTime.night) {
+				return Promise.resolve();
+			}
+			return Promise.reject('Cannot move to a new day until it is night.');
+		})
 		.then(() => mustBeTrue(dao.isPlayerMod, [game, mod], 'Poster is not mod'))
 		.then(() => dao.incrementDay(game))
 		.then(() => dao.getGameById(game))
