@@ -59,7 +59,7 @@ function createModel(config) {
 	// |- 1:N
 	player.hasMany(vote, {as: 'voter', foreignKey: 'voterId'});
 	player.hasMany(vote, {as: 'target', foreignKey: 'targetId'});
-	game.hasMany(vote);
+	game.hasMany(vote, {foreignKey: 'gameId'});
 	// game.hasMany(segment);
 	// |- M:N
 	player.belongsToMany(game, {through: roster});
@@ -595,62 +595,49 @@ module.exports = {
 	},
 
 	getAllVotesForDaySorted: function(game, day) {
-		return module.exports.getAllVotesForDay(game, day).reduce(
-			(votes, vote) => {
-				if (votes.current.has(vote.voter.id)) {
-					/* There is a current vote by the user */
-					if (votes.current.get(vote.voter.id).post > vote.post) {
-						/* New vote is older than current vote */
-						votes.old.push(vote);
-					} else {
-						/* New vote is newer than current vote */
-						votes.old.push(votes.current.get(vote.voter.id));
-						votes.current.set(vote.voter.id, vote);
-					}
+		const seen = new Map();
+
+		return module.exports.getAllVotesForDay(game, day)
+			.then((votes) => {
+				return votes.sort((a, b) => b.post - a.post); // latest first
+			})
+			.mapSeries((vote) => {
+				if (seen.has(vote.voter.name)) {
+					vote.isCurrent = false;
+					vote.rescindedAt = seen.get(vote.voter.name);
+					seen.set(vote.voter.name, vote.post);
 				} else {
-					/* There is not a current vote by the user */
-					votes.current.set(vote.voter.id, vote);
+					vote.isCurrent = true;
+					vote.rescindedAt = null;
+					seen.set(vote.voter.name, vote.post);
 				}
 
-				return votes;
-			},
-			{old: [], current: new Map()} // Initial value.
-		);
+				return vote;
+			})
+			.filter((vote) => vote.target.name !== module.exports.playerStatus.unvote)
+			.then((votes) => votes.reverse());
 	},
 
 	getCurrentVotes: function(game, day) {
-		return module.exports.getAllVotesForDaySorted(game, day).then((votes) => {
-			return votes.current;
-		});
+		return module.exports.getAllVotesForDaySorted(game, day)
+			.filter((vote) => vote.isCurrent === true);
 	},
 
 	getPlayersWithoutActiveVotes: function(game, day) {
-		return module.exports.getCurrentVotes(game, day).then((votes) => {
-			return Promise.filter(
-				module.exports.getLivingPlayers(game),
-				(entry) => {
-					if (votes.has(entry.player.id)) {
-						/* Player has a current vote */
-						return votes.get(entry.player.id).target.name === module.exports.playerStatus.unvote;
-					} else {
-						/* Player hasn't voted */
-						return true;
-					}
-				}
-			);
-		});
+		return module.exports.getCurrentVotes(game, day)
+			.map((vote) => vote.voter.id)
+			.then((votes) => {
+				return module.exports.getLivingPlayers(game)
+					.filter((entry) => votes.indexOf(entry.player.id) < 0);
+			});
 	},
 	
 	getNumVotesForPlayer: function(game, day, player) {
 		return module.exports.getPlayerByName(player)
 			.then((playerInstance) => {
-				return Promise.map(
-					module.exports.getCurrentVotes(game, day),
-					(vote) => vote[1].target.id === playerInstance.id ? 1 : 0
-				).reduce(
-					(sum, vote) => (sum + vote),
-					0 // Initial value.
-				);
+				return module.exports.getCurrentVotes(game, day)
+					.filter((vote) => vote.target.id === playerInstance.id)
+					.then((votes) => votes.length);
 			});
 	},
 

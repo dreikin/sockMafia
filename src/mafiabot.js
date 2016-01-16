@@ -626,7 +626,7 @@ exports.joinHandler = function (command) {
 			return Promise.reject('Cannot join game in progress.');
 		})
 		.then(() => mustBeFalse(dao.isPlayerInGame, [id, player], 'You are already in this game, @' + player + '!'))
-		.then(() => dao.addPlayerToGame(id, player.toLowerCase()))
+		.then(() => dao.addPlayerToGame(id, player))
 		.then(() => internals.browser.createPost(id, post, 'Welcome to the game, @' + player, () => 0))
 		.catch((err) => reportError(command, 'Error when adding to game: ', err));
 };
@@ -653,7 +653,7 @@ exports.listPlayersHandler = function (command) {
 
 			rows.forEach((row) => {
 				if (row.playerStatus === dao.playerStatus.alive) {
-					alive.push(row.player.name);
+					alive.push(row.player.properName);
 				}
 			});
 
@@ -712,9 +712,9 @@ exports.listAllPlayersHandler = function (command) {
 
 		rows.forEach((row) => {
 			if (row.playerStatus === dao.playerStatus.alive) {
-				alive.push(row.player.name);
+				alive.push(row.player.properName);
 			} else if (row.playerStatus === dao.playerStatus.dead) {
-				dead.push(row.player.name);
+				dead.push(row.player.properName);
 			}
 		});
 
@@ -783,7 +783,7 @@ exports.listVotesHandler = function (command) {
 		day: 0,
 		votes: {},
 		numNotVoting: 0,
-		notVoting: {},
+		notVoting: [],
 		toExecute: 0
 	};
 
@@ -798,27 +798,10 @@ exports.listVotesHandler = function (command) {
 		}).then((num) => {
 			data.toExecute = num;
 			return dao.getAllVotesForDaySorted(id, data.day);
-		}).then((votes) => {
-			const rows = [];
-			votes.old.forEach((vote) => {
-				vote.isCurrent = false;
-				rows.push(vote);
-			});
-
-			votes.current.forEach((vote) => {
-				vote.isCurrent = true;
-				rows.push(vote);
-			});
-
-			return rows;
 		}).then((rows) => {
 			rows.forEach((row) => {
-				const votee = row.target.name;
-				const voter = row.voter.name;
-
-				if (votee === dao.playerStatus.unvote) {
-					return;
-				}
+				const votee = row.target.properName;
+				const voter = row.voter.properName;
 
 				if (!data.votes.hasOwnProperty(votee)) {
 					data.votes[votee] = {
@@ -838,6 +821,7 @@ exports.listVotesHandler = function (command) {
 				data.votes[votee].names.push({
 					voter: voter,
 					retracted: !row.isCurrent,
+					retractedAt: row.rescindedAt,
 					post: row.post,
 					game: id
 				});
@@ -846,7 +830,7 @@ exports.listVotesHandler = function (command) {
 			return dao.getLivingPlayers(id);
 		}).then((rows) => {
 			const players = rows.map((row) => {
-				return row.player.name;
+				return row.player.properName;
 			});
 			data.numPlayers = players.length;
 			data.notVoting = players.filter((element) => {
