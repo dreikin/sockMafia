@@ -1,13 +1,14 @@
 'use strict';
 const Handlebars = require('handlebars');
 
-module.exports = function(percent) {
+module.exports = function(percent, numPlayers, toExecute) {
 	let fillColor, bgColor;
+	let murderPercent = (toExecute-1)/numPlayers;
 	
 	if (percent >= 100) {
 		fillColor = '#560000';
 		bgColor = '#AC1717';
-	} else if (percent >= 60) {
+	} else if (percent >= murderPercent) {
 		fillColor = '#617500';
 		bgColor = '#B6CF3F';
 	} else {
