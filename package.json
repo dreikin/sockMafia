@@ -2,7 +2,7 @@
   "name": "sockmafia",
   "version": "1.0.0",
   "description": "Mafia plugin for sockbot",
-  "main": "index.js",
+  "main": "./src/mafiabot.js",
   "scripts": {
     "start": "node --harmony --harmony_arrow_functions node_modules/SockBot/lib/cli.js",
     "lint": "eslint .",
