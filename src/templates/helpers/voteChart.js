@@ -8,7 +8,7 @@ module.exports = function(percent, numPlayers, toExecute) {
 	if (percent >= 100) {
 		fillColor = '#560000';
 		bgColor = '#AC1717';
-	} else if (percent >= murderPercent) {
+	} else if (percent <= murderPercent) {
 		fillColor = '#617500';
 		bgColor = '#B6CF3F';
 	} else {
