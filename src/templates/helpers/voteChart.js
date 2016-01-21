@@ -3,7 +3,7 @@ const Handlebars = require('handlebars');
 
 module.exports = function(percent, numPlayers, toExecute) {
 	let fillColor, bgColor;
-	let murderPercent = (toExecute-1)/numPlayers;
+	const murderPercent = (toExecute - 1) / numPlayers;
 	
 	if (percent >= 100) {
 		fillColor = '#560000';
