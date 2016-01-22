@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node --harmony --harmony_arrow_functions node_modules/SockBot/lib/cli.js",
     "lint": "eslint .",
-    "test": "eslint . && istanbul cover node_modules/mocha/bin/_mocha -- ./test/mafiaTest.js --recursive -R dot ",
+    "test": "eslint . && istanbul cover node_modules/mocha/bin/_mocha -- ./test/*est.js --recursive -R dot ",
     "istanbul": "eslint .; istanbul cover node_modules/mocha/bin/_mocha -- --recursive -R nyan",
     "mocha": "eslint .;mocha --recursive -R nyan"
   },
