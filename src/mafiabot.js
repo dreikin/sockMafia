@@ -291,6 +291,43 @@ exports.startHandler = function (command) {
 		.catch((err) => reportError(command, 'Error when starting game: ', err));
 };
 
+exports.setHandler = function (command) {
+	const game = command.post.topic_id;
+	const mod = command.post.username;
+	const target = command.args[0].replace(/^@?(.*?)[.!?, ]?/, '$1');
+	const property = command.args[1];
+	
+	const validProperties = [
+		'loved',
+		'hated',
+		'doublevoter'
+	];
+	
+	return dao.getGameStatus(game)
+		.then((status) => {
+			if (status === dao.gameStatus.finished) {
+				return Promise.reject('The game is over!');
+			}
+			return Promise.resolve();
+		})
+		.then(() => mustBeTrue(dao.isPlayerMod, [game, mod], 'Poster is not mod'))
+		.then(() => mustBeTrue(dao.isPlayerInGame, [game, target], 'Target not valid'))
+		.then(() => {
+			if (!validProperties.contains(property.toLowerCase())) {
+				return Promise.reject('Property not valid.\n Valid properties: ' + validProperties.join(', '));
+			}
+		})
+		.then(() => dao.addPropertyToPlayer(game, target, property.toLowerCase()))
+		.then(() => {
+			return respondWithTemplate('templates/modSuccess.handlebars', {
+				command: 'Set property',
+				results: 'Player ' + target + ' is now ' + property,
+				game: game
+			}, command);
+		})
+		.catch((err) => reportError(command, 'Error setting player property: ', err));
+};
+
  /**
   * New-day: A mod function that starts a new day
   * Must be used in the game thread.

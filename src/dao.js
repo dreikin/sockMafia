@@ -428,6 +428,10 @@ module.exports = {
 				});
 			});
 	},
+	
+	addPropertyToPlayer: function(game, player, property) {
+		return Promise.reject('Not yet implemented');
+	},
 
 	getAllPlayers: function(game) {
 		return Models.roster.findAll({where: {gameId: game}, include: [Models.players]});

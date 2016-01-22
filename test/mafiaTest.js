@@ -72,6 +72,7 @@ describe('mafia', () => {
 				commandSpy.calledWith('list-votes').should.be.true;
 				commandSpy.calledWith('kill').should.be.true;
 				commandSpy.calledWith('new-day').should.be.true;
+				commandSpy.calledWith('set').should.be.true;
 			});
 		});
 	});
@@ -1298,6 +1299,234 @@ describe('mafia', () => {
 				gameOutputData.names.should.include('accalia');
 				gameOutputData.names.should.include('yamikuronue');
 				gameOutputData.names.length.should.equal(2);
+			});
+		});
+	});
+	
+	describe('set()', () => {
+		it('Should reject non-mods', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				},
+				args: [
+					'yamikuronue',
+					'loved'
+				]
+			};
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
+			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(false);
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
+			sandbox.stub(mafiaDAO, 'addPropertyToPlayer').resolves();
+			
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: ['dreikin'],
+				name: 'testMafia'
+			};
+			
+			return mafia.setHandler(command).then( () => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('Error setting player property: Poster is not mod');
+			});
+		});
+
+		it('Should reject non-players', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				},
+				args: [
+					'yamikuronue',
+					'loved'
+				]
+			};
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
+			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(true);
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(false);
+			sandbox.stub(mafiaDAO, 'addPropertyToPlayer').resolves();
+			
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: ['dreikin'],
+				name: 'testMafia'
+			};
+			
+			return mafia.setHandler(command).then( () => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('Error setting player property: Target not valid');
+			});
+		});
+		
+		it('Should allow loved', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				},
+				args: [
+					'yamikuronue',
+					'loved'
+				]
+			};
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
+			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(true);
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
+			sandbox.stub(mafiaDAO, 'addPropertyToPlayer').resolves();
+			
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: ['dreikin'],
+				name: 'testMafia'
+			};
+			
+			return mafia.setHandler(command).then( () => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('Player yamikuronue is now loved');
+			});
+		});
+		
+		it('Should allow hated', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				},
+				args: [
+					'yamikuronue',
+					'hated'
+				]
+			};
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
+			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(true);
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
+			sandbox.stub(mafiaDAO, 'addPropertyToPlayer').resolves();
+			
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: ['dreikin'],
+				name: 'testMafia'
+			};
+			
+			return mafia.setHandler(command).then( () => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('Player yamikuronue is now hated');
+			});
+		});
+		
+		it('Should allow doublevoter', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				},
+				args: [
+					'yamikuronue',
+					'doublevoter'
+				]
+			};
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
+			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(true);
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
+			sandbox.stub(mafiaDAO, 'addPropertyToPlayer').resolves();
+			
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: ['dreikin'],
+				name: 'testMafia'
+			};
+			
+			return mafia.setHandler(command).then( () => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('Player yamikuronue is now doublevoter');
+			});
+		});
+		
+		it('Should reject doodoohead', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				},
+				args: [
+					'yamikuronue',
+					'doodoohead'
+				]
+			};
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
+			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(true);
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
+			sandbox.stub(mafiaDAO, 'addPropertyToPlayer').resolves();
+			
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: ['dreikin'],
+				name: 'testMafia'
+			};
+			
+			return mafia.setHandler(command).then( () => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('Error setting player property: Property not valid');
+				output.should.include('Valid properties: loved, hated, doublevote');
+			});
+		});
+		
+		it('Should report errors from the DAO', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				},
+				args: [
+					'yamikuronue',
+					'doublevoter'
+				]
+			};
+
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
+			sandbox.stub(mafiaDAO, 'isPlayerMod').resolves(true);
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
+			sandbox.stub(mafiaDAO, 'addPropertyToPlayer').rejects('Error in DAO');
+			
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: ['dreikin'],
+				name: 'testMafia'
+			};
+			
+			return mafia.setHandler(command).then( () => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+
+				const output = browser.createPost.getCall(0).args[2];
+				output.should.include('Error setting player property');
+				output.should.include('Error in DAO');
 			});
 		});
 	});
