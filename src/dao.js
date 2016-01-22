@@ -493,12 +493,6 @@ module.exports = {
 		});
 	},
 
-	isPlayerInGame: function(game, player) {
-		return module.exports.getPlayerInGame(game, player)
-			.then((instance) => instance !== null)
-			.catch(() => false);
-	},
-
 	setPlayerStatus: function(game, player, status) {
 		return module.exports.getPlayerInGame(game, player)
 			.then((playerInstance) => playerInstance.update({playerStatus: status}));
@@ -535,13 +529,19 @@ module.exports = {
 				return (status === module.exports.playerStatus.alive
 					|| status === module.exports.playerStatus.unvote
 					|| status === module.exports.playerStatus.nolynch);
-			})
+			});
+	},
+
+	isPlayerMod: function(game, player) {
+		return module.exports.getPlayerStatus(game, player)
+			.then((status) => status === module.exports.playerStatus.mod)
 			.catch(() => false);
 	},
 
-	isPlayerMod(game, player) {
-		return module.exports.getPlayerStatus(game, player)
-			.then((status) => status === module.exports.playerStatus.mod)
+	
+	isPlayerInGame: function(game, player) {
+		return module.exports.getPlayerInGame(game, player)
+			.then((instance) => instance !== null)
 			.catch(() => false);
 	},
 
