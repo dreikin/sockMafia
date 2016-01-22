@@ -235,7 +235,7 @@ exports.prepHandler = function (command) {
 				if (status === dao.gameStatus.auto) {
 					return dao.convertAutoToPrep(id, gameName);
 				}
-				return Promise.reject('Game already ' + status);
+				return Promise.reject('Game is in the wrong status. The game is ' + status);
 			},
 			() => dao.addGame(id, gameName))
 		.then(() => dao.addMod(id, player))
@@ -289,6 +289,43 @@ exports.startHandler = function (command) {
 			}, command);
 		})
 		.catch((err) => reportError(command, 'Error when starting game: ', err));
+};
+
+exports.setHandler = function (command) {
+	const game = command.post.topic_id;
+	const mod = command.post.username;
+	const target = command.args[0].replace(/^@?(.*?)[.!?, ]?/, '$1');
+	const property = command.args[1];
+	
+	const validProperties = [
+		'loved',
+		'hated',
+		'doublevoter'
+	];
+	
+	return dao.getGameStatus(game)
+		.then((status) => {
+			if (status === dao.gameStatus.finished) {
+				return Promise.reject('The game is over!');
+			}
+			return Promise.resolve();
+		})
+		.then(() => mustBeTrue(dao.isPlayerMod, [game, mod], 'Poster is not mod'))
+		.then(() => mustBeTrue(dao.isPlayerInGame, [game, target], 'Target not valid'))
+		.then(() => {
+			if (!validProperties.contains(property.toLowerCase())) {
+				return Promise.reject('Property not valid.\n Valid properties: ' + validProperties.join(', '));
+			}
+		})
+		.then(() => dao.addPropertyToPlayer(game, target, property.toLowerCase()))
+		.then(() => {
+			return respondWithTemplate('templates/modSuccess.handlebars', {
+				command: 'Set property',
+				results: 'Player ' + target + ' is now ' + property,
+				game: game
+			}, command);
+		})
+		.catch((err) => reportError(command, 'Error setting player property: ', err));
 };
 
  /**
@@ -560,7 +597,15 @@ exports.voteHandler = function (command) {
 			return Promise.join(
 				dao.getNumToLynch(game),
 				dao.getNumVotesForPlayer(game, day, target),
-				function (numToLynch, numReceived) {
+				dao.getPlayerProperty(game, target),
+				function (numToLynch, numReceived, property) {
+					if (property === 'loved') {
+						numToLynch += 1;
+					}
+					if (property === 'hated') {
+						numToLynch -= 1;
+					}
+
 					if (numToLynch <= numReceived) {
 						return lynchPlayer(game, target);
 					} else {
@@ -850,7 +895,7 @@ exports.listVotesHandler = function (command) {
 					game: id
 				});
 			});
-
+			
 			return dao.getLivingPlayers(id);
 		}).then((rows) => {
 			const players = rows.map((row) => {
@@ -862,7 +907,29 @@ exports.listVotesHandler = function (command) {
 			});
 			data.notVoting = shuffle(data.notVoting);
 			data.numNotVoting = data.notVoting.length;
-			return readFile(__dirname + '/templates/voteTemplate.handlebars');
+			
+			//Add modifiers
+			const pendingLookups = [];
+			let currLookup;
+			players.forEach((target) => {
+				if (data.votes.hasOwnProperty(target)) {
+					currLookup = dao.getPlayerProperty(target).then((property) => {
+						let mod;
+						if (property === 'loved') {
+							mod = 1;
+						} else if (property === 'hated') {
+							mod = -1;
+						} else {
+							mod = 0;
+						}
+						
+						data.votes[target].mod = mod;
+					});
+					pendingLookups.push(currLookup);
+				}
+			});
+			
+			return Promise.all(pendingLookups).then(() => readFile(__dirname + '/templates/voteTemplate.handlebars'));
 		}).then((buffer) => {
 			const source = buffer.toString();
 			const template = Handlebars.compile(source);
