@@ -122,6 +122,17 @@ function reportError (command, preface, error) {
 	);
 }
 
+function respondWithTemplate(templateFile, data, command) {
+	return readFile(__dirname + '/' + templateFile)
+	.then((buffer) => {
+		const source = buffer.toString();
+		const template = Handlebars.compile(source);
+
+		const output = template(data);
+		internals.browser.createPost(command.post.topic_id, command.post.post_number, output, () => 0);
+	});
+}
+
 /**
  * Shuffle function using Fisher-Yates algorithm, from SO
  *
@@ -270,6 +281,13 @@ exports.startHandler = function (command) {
 		.then(() => dao.setGameStatus(game, dao.gameStatus.running))
 		.then(() => dao.incrementDay(game))
 		.then(() => dao.setCurrentTime(game, dao.gameTime.day))
+		.then(() => {
+			return respondWithTemplate('templates/modSuccess.handlebars', {
+				command: 'Start game',
+				results: 'Game is now ready to play',
+				game: game
+			}, command);
+		})
 		.catch((err) => reportError(command, 'Error when starting game: ', err));
 };
 
@@ -378,9 +396,12 @@ exports.killHandler = function (command) {
 		.then(() => mustBeTrue(dao.isPlayerAlive, [game, target], 'Target not alive'))
 		.then(() => dao.killPlayer(game, target))
 		.then(() => dao.getGameById(game))
-		.then((gameInstance) => {
-			const text = 'Killed @' + target + ' in game ' + gameInstance.name;
-			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+		.then(() => {
+			return respondWithTemplate('templates/modSuccess.handlebars', {
+				command: 'Kill',
+				results: 'Killed @' + target,
+				game: game
+			}, command);
 		})
 		.catch((err) => reportError(command, 'Error killing player: ', err));
 };
@@ -415,8 +436,11 @@ exports.finishHandler = function (command) {
 		.then(() => dao.setGameStatus(game, dao.gameStatus.finished))
 		.then(() => exports.listAllPlayersHandler(command))
 		.then(() => {
-			const text = 'Game now finished.';
-			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+			return respondWithTemplate('templates/modSuccess.handlebars', {
+				command: 'End game',
+				results: 'Game now finished.',
+				game: game
+			}, command);
 		})
 		.catch((err) => reportError(command, 'Error finalizing game: ', err));
 };

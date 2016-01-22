@@ -1078,7 +1078,7 @@ describe('mafia', () => {
 
 				mafiaDAO.killPlayer.called.should.be.true;
 				const output = browser.createPost.getCall(0).args[2];
-				output.should.include('Killed @yamikuronue in game testMafia');
+				output.should.include('Command Kill executed successfully in game 12345: Killed @yamikuronue');
 			});
 		});
 	});
