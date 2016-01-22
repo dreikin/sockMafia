@@ -954,6 +954,16 @@ exports.prepare = function prepare(plugConfig, config, events, browser) {
 			}
 		})
 		.then(() => {
+			if (plugConfig.mods) {
+				return Promise.each(
+					plugConfig.mods,
+					(mod) => dao.addMod(plugConfig.thread, mod)
+				);
+			} else {
+				return Promise.resolve();
+			}			
+		})
+		.then(() => {
 			registerCommands(events);
 		})
 		.catch((err) => {
