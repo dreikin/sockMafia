@@ -895,7 +895,7 @@ exports.listVotesHandler = function (command) {
 					game: id
 				});
 			});
-
+			
 			return dao.getLivingPlayers(id);
 		}).then((rows) => {
 			const players = rows.map((row) => {
@@ -907,7 +907,29 @@ exports.listVotesHandler = function (command) {
 			});
 			data.notVoting = shuffle(data.notVoting);
 			data.numNotVoting = data.notVoting.length;
-			return readFile(__dirname + '/templates/voteTemplate.handlebars');
+			
+			//Add modifiers
+			const pendingLookups = [];
+			let currLookup;
+			players.forEach((target) => {
+				if (data.votes.hasOwnProperty(target)) {
+					currLookup = dao.getPlayerProperty(target).then((property) => {
+						let mod;
+						if (property === 'loved') {
+							mod = 1;
+						} else if (property === 'hated') {
+							mod = -1;
+						} else {
+							mod = 0;
+						}
+						
+						data.votes[target].mod = mod;
+					});
+					pendingLookups.push(currLookup);
+				}
+			});
+			
+			return Promise.all(pendingLookups).then(() => readFile(__dirname + '/templates/voteTemplate.handlebars'));
 		}).then((buffer) => {
 			const source = buffer.toString();
 			const template = Handlebars.compile(source);
