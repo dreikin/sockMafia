@@ -15,7 +15,9 @@ const slugs = [
 	'easterEgg',
 	'upupdowndownleftrightleftrightbastart',
 	'discourse-sucks-purple-monkey-balls',
-	'donateToAGDQ'
+	'donateToAGDQ',
+	'stillABetterLoveStoryThanTwilight',
+	'spaceInfixOperators'
 ];
 
 module.exports = function(list) {

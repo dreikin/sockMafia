@@ -21,3 +21,5 @@ mafiadbTesting.db
 .idea/
 mafiadbTesting-journal
 intTesting.db
+*.db
+*.db-journal

@@ -12,7 +12,7 @@ module.exports = (db) => {
 			primaryKey: true,
 			autoIncrement: true
 		},
-		// Game status (prep, active, finished, etc.)
+		// Game status (preparing, running, paused, abandoned, finished)
 		status: {
 			type: orm.TEXT,
 			allowNull: false
