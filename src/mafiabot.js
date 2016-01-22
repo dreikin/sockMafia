@@ -571,6 +571,14 @@ exports.voteHandler = function (command) {
 				mustBeTrue(dao.isPlayerAlive, [game, target], 'Target not alive'),
 				mustBeTrue(isDaytime, [game], 'It is not day')
 			]);
+		}) /* Revoke current vote, now a Controller responsibility */
+		.then(() => dao.getCurrentVoteByPlayer(game, voter))
+		.then((vote) => {
+			if (vote) {
+				return dao.revokeAction(game, vote.id, post)
+			} else {
+				return true;
+			}
 		})
 		.then(() => dao.addVote(game, post, voter, target))
 		.then((result) => {

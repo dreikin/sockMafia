@@ -125,6 +125,7 @@ describe('mafia', () => {
 			sandbox.stub(mafiaDAO, 'isPlayerAlive').resolves(true);
 			sandbox.stub(mafiaDAO, 'getCurrentTime').resolves(mafiaDAO.gameTime.day);
 			sandbox.stub(mafiaDAO, 'addVote').resolves(true);
+			sandbox.stub(mafiaDAO, 'getCurrentVoteByPlayer').resolves(undefined);
 			sandbox.stub(mafiaDAO, 'getPlayerProperty').resolves('vanilla');
 
 			return mafia.voteHandler(command).then(() => {
@@ -154,6 +155,7 @@ describe('mafia', () => {
 			sandbox.stub(mafiaDAO, 'getCurrentTime').resolves(mafiaDAO.gameTime.day);
 			sandbox.stub(mafiaDAO, 'addVote').resolves(true);
 			sandbox.stub(mafiaDAO, 'getPlayerProperty').resolves('vanilla');
+			sandbox.stub(mafiaDAO, 'getCurrentVoteByPlayer').resolves(undefined);
 
 			return mafia.voteHandler(command).then(() => {
 				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
@@ -182,6 +184,7 @@ describe('mafia', () => {
 			sandbox.stub(mafiaDAO, 'getCurrentTime').resolves(mafiaDAO.gameTime.day);
 			sandbox.stub(mafiaDAO, 'addVote').resolves(true);
 			sandbox.stub(mafiaDAO, 'getPlayerProperty').resolves('vanilla');
+			sandbox.stub(mafiaDAO, 'getCurrentVoteByPlayer').resolves(undefined);
 
 			return mafia.voteHandler(command).then(() => {
 				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
@@ -210,6 +213,7 @@ describe('mafia', () => {
 			sandbox.stub(mafiaDAO, 'getCurrentTime').resolves(mafiaDAO.gameTime.day);
 			sandbox.stub(mafiaDAO, 'addVote').resolves(true);
 			sandbox.stub(mafiaDAO, 'getPlayerProperty').resolves('vanilla');
+			sandbox.stub(mafiaDAO, 'getCurrentVoteByPlayer').resolves(undefined);
 
 			return mafia.voteHandler(command).then(() => {
 				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
@@ -238,6 +242,7 @@ describe('mafia', () => {
 			sandbox.stub(mafiaDAO, 'getCurrentTime').resolves(mafiaDAO.gameTime.night);
 			sandbox.stub(mafiaDAO, 'addVote').resolves(true);
 			sandbox.stub(mafiaDAO, 'getPlayerProperty').resolves('vanilla');
+			sandbox.stub(mafiaDAO, 'getCurrentVoteByPlayer').resolves(undefined);
 
 			return mafia.voteHandler(command).then(() => {
 				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
@@ -246,7 +251,65 @@ describe('mafia', () => {
 				output.should.include('It is not day');
 			});
 		});
+		
+		it('should rescind old votes', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				},
+				args: ['@noLunch'],
+				input: '!for @noLunch'
+			};
 
+			mafia.internals.browser = browser;
+			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
+			sandbox.stub(mafiaDAO, 'isPlayerAlive').resolves(true);
+			sandbox.stub(mafiaDAO, 'getCurrentTime').resolves(mafiaDAO.gameTime.day);
+			sandbox.stub(mafiaDAO, 'addVote').resolves(true);
+			sandbox.stub(mafiaDAO, 'getCurrentVoteByPlayer').resolves({
+				id: 1,
+				name: 'charlie'
+			});
+			sandbox.stub(mafiaDAO, 'revokeAction').resolves();
+			sandbox.stub(mafiaDAO, 'getPlayerProperty').resolves('vanilla');
+
+			return mafia.voteHandler(command).then(() => {
+				mafiaDAO.getCurrentVoteByPlayer.called.should.be.true;
+				mafiaDAO.revokeAction.called.should.be.true;
+			});
+		});
+		
+		it('should not revoke nonexistant votes', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				},
+				args: ['@noLunch'],
+				input: '!for @noLunch'
+			};
+
+			mafia.internals.browser = browser;
+			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
+			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
+			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
+			sandbox.stub(mafiaDAO, 'isPlayerAlive').resolves(true);
+			sandbox.stub(mafiaDAO, 'getCurrentTime').resolves(mafiaDAO.gameTime.day);
+			sandbox.stub(mafiaDAO, 'addVote').resolves(true);
+			sandbox.stub(mafiaDAO, 'getCurrentVoteByPlayer').resolves(undefined);
+			sandbox.stub(mafiaDAO, 'revokeAction').resolves();
+			sandbox.stub(mafiaDAO, 'getPlayerProperty').resolves('vanilla');
+
+			return mafia.voteHandler(command).then(() => {
+				mafiaDAO.revokeAction.called.should.be.false;
+			});
+		});
+		
 		it('should announce voting failures', () => {
 			const command = {
 				post: {
@@ -266,6 +329,7 @@ describe('mafia', () => {
 			sandbox.stub(mafiaDAO, 'getCurrentTime').resolves(mafiaDAO.gameTime.day);
 			sandbox.stub(mafiaDAO, 'addVote').resolves(false);
 			sandbox.stub(mafiaDAO, 'getPlayerProperty').resolves('vanilla');
+			sandbox.stub(mafiaDAO, 'getCurrentVoteByPlayer').resolves(undefined);
 
 			return mafia.voteHandler(command).then(() => {
 				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
@@ -297,6 +361,7 @@ describe('mafia', () => {
 			sandbox.stub(mafiaDAO, 'getNumVotesForPlayer').resolves(1);
 			sandbox.stub(mafiaDAO, 'addVote').resolves(true);
 			sandbox.stub(mafiaDAO, 'getPlayerProperty').resolves('vanilla');
+			sandbox.stub(mafiaDAO, 'getCurrentVoteByPlayer').resolves(undefined);
 
 			return mafia.voteHandler(command).then(() => {
 				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
@@ -329,6 +394,7 @@ describe('mafia', () => {
 			sandbox.stub(mafiaDAO, 'getNumVotesForPlayer').resolves(1);
 			sandbox.stub(mafiaDAO, 'addVote').resolves(true);
 			sandbox.stub(mafiaDAO, 'getPlayerProperty').resolves('vanilla');
+			sandbox.stub(mafiaDAO, 'getCurrentVoteByPlayer').resolves(undefined);
 
 			return mafia.voteHandler(command).then(() => {
 				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
@@ -364,7 +430,7 @@ describe('mafia', () => {
 			
 			sandbox.stub(mafiaDAO, 'killPlayer').resolves({player: {properName: 'noLunch'}});
 			sandbox.stub(mafiaDAO, 'setCurrentTime').resolves();
-
+			sandbox.stub(mafiaDAO, 'getCurrentVoteByPlayer').resolves(undefined);
 
 			return mafia.voteHandler(command).then(() => {
 				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
@@ -401,6 +467,7 @@ describe('mafia', () => {
 			
 			sandbox.stub(mafiaDAO, 'killPlayer').resolves({player: {properName: 'noLunch'}});
 			sandbox.stub(mafiaDAO, 'setCurrentTime').resolves();
+			sandbox.stub(mafiaDAO, 'getCurrentVoteByPlayer').resolves(undefined);
 
 
 			return mafia.voteHandler(command).then(() => {
@@ -434,6 +501,7 @@ describe('mafia', () => {
 			
 			sandbox.stub(mafiaDAO, 'killPlayer').resolves({player: {properName: 'noLunch'}});
 			sandbox.stub(mafiaDAO, 'setCurrentTime').resolves();
+			sandbox.stub(mafiaDAO, 'getCurrentVoteByPlayer').resolves(undefined);
 
 
 			return mafia.voteHandler(command).then(() => {
@@ -471,6 +539,7 @@ describe('mafia', () => {
 			
 			sandbox.stub(mafiaDAO, 'killPlayer').resolves({player: {properName: 'noLunch'}});
 			sandbox.stub(mafiaDAO, 'setCurrentTime').resolves();
+			sandbox.stub(mafiaDAO, 'getCurrentVoteByPlayer').resolves(undefined);
 
 
 			return mafia.voteHandler(command).then(() => {
@@ -504,6 +573,7 @@ describe('mafia', () => {
 			
 			sandbox.stub(mafiaDAO, 'killPlayer').resolves({player: {properName: 'noLunch'}});
 			sandbox.stub(mafiaDAO, 'setCurrentTime').resolves();
+			sandbox.stub(mafiaDAO, 'getCurrentVoteByPlayer').resolves(undefined);
 
 
 			return mafia.voteHandler(command).then(() => {

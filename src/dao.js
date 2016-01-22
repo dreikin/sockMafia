@@ -630,6 +630,21 @@ module.exports = {
 		return module.exports.getAllVotesForDaySorted(game, day)
 			.filter((vote) => vote.isCurrent === true);
 	},
+	
+	getCurrentVoteByPlayer: function(game, player) {
+		return Promise.join(
+			module.exports.getPlayerByName(player),
+			module.exports.getCurrentDay(game),
+			(playerInstance, day) => {
+				return module.exports.getCurrentVotes(game, day)
+					.filter((vote) => vote.voter.id === playerInstance.id);
+			});
+	},
+	
+	revokeAction: function(game, id, revokedInId) {
+		//Not yet implemented
+		Promise.resolve('Implement me')
+	},
 
 	getPlayersWithoutActiveVotes: function(game, day) {
 		return module.exports.getCurrentVotes(game, day)
