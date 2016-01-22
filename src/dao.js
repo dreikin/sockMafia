@@ -486,6 +486,10 @@ module.exports = {
 		return module.exports.getPlayerInGame(game, player)
 			.then((rosterInstance) => rosterInstance.playerStatus);
 	},
+	getPlayerProperty: function(game, player) {
+		//Expected return: Resolve to 'loved','hated','doublevoted', or 'vanilla', or reject if the player is not in the game.
+		return Promise.reject('Not yet implemented');
+	},
 
 	getSpectators: function(game) {
 		return Models.roster.findAll({

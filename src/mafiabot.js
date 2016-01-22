@@ -597,7 +597,15 @@ exports.voteHandler = function (command) {
 			return Promise.join(
 				dao.getNumToLynch(game),
 				dao.getNumVotesForPlayer(game, day, target),
-				function (numToLynch, numReceived) {
+				dao.getPlayerProperty(game, target),
+				function (numToLynch, numReceived, property) {
+					if (property === 'loved') {
+						numToLynch += 1;
+					}
+					if (property === 'hated') {
+						numToLynch -= 1;
+					}
+
 					if (numToLynch <= numReceived) {
 						return lynchPlayer(game, target);
 					} else {
