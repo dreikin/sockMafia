@@ -235,7 +235,7 @@ exports.prepHandler = function (command) {
 				if (status === dao.gameStatus.auto) {
 					return dao.convertAutoToPrep(id, gameName);
 				}
-				return Promise.reject('Game already ' + status);
+				return Promise.reject('Game is in the wrong status. The game is ' + status);
 			},
 			() => dao.addGame(id, gameName))
 		.then(() => dao.addMod(id, player))
