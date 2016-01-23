@@ -579,7 +579,7 @@ exports.voteHandler = function (command) {
 			}
 			let text;
 
-			if (target.toLowerCase() === dao.playerStatus.unvote) {
+			if (target.toLowerCase() === dao.action.unvote) {
 				text = '@' + command.post.username + ' rescinded their vote';
 			} else {
 				text = '@' + command.post.username + ' voted for @' + target;
