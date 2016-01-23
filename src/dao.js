@@ -618,7 +618,13 @@ module.exports = {
 		return Models.actions.findAll({
 			where: {
 				gameId: game,
-				day: day
+				day: day,
+				action: [
+					exports.action.vote,
+					exports.action.for,
+					exports.action.unvote,
+					exports.action.nolynch
+				]
 			},
 			include: [
 				{model: Models.players, as: 'voter'},
@@ -630,7 +636,7 @@ module.exports = {
 	getAllVotesForDaySorted: function(game, day) {
 		const seen = new Map();
 
-		return module.exports.getAllVotesForDay(game, day)
+		return exports.getAllVotesForDay(game, day)
 			.then((votes) => {
 				return votes.sort((a, b) => b.post - a.post); // latest first
 			})
@@ -647,7 +653,7 @@ module.exports = {
 
 				return vote;
 			})
-			.filter((vote) => vote.target.name !== module.exports.playerStatus.unvote)
+			.filter((vote) => vote.action !== module.exports.action.unvote)
 			.then((votes) => votes.reverse());
 	},
 
@@ -683,7 +689,13 @@ module.exports = {
 					where: {
 						gameId: game,
 						playerId: playerInstance.id,
-						day: gameInstance.day
+						day: gameInstance.day,
+						action: [
+							exports.action.vote,
+							exports.action.for,
+							exports.action.unvote,
+							exports.action.nolynch
+						]
 					}
 				});
 			})
