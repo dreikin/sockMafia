@@ -550,7 +550,7 @@ exports.voteHandler = function (command) {
 	const voter = command.post.username;
 	// The following regex strips a preceding @ and captures up to either the end of input or one of [.!?, ].
 	// I need to check the rules for names.  The latter part may work just by using `(\w*)` after the `@?`.
-	let target = command.args[0].replace(/^@?(.*?)[.!?, ]?/, '$1');
+	let target = command.args[0].replace(/^@?(.*?)[.!?, ]?$/, '$1');
 	if (target.toLowerCase() === 'no-lynch') {
 		target = 'nolynch';
 	}

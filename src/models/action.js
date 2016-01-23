@@ -12,30 +12,39 @@ module.exports = (db) => {
 			primaryKey: true,
 			autoIncrement: true
 		},
+		gameId: {
+			type: orm.INTEGER,
+			allowNull: false,
+			unique: 'vote_game_post_player_action_target'
+		},
 		// Post number of the vote
 		post: {
 			type: orm.INTEGER,
 			allowNull: false,
-			unique: 'vote_post_voter_target_game'
+			unique: 'vote_game_post_player_action_target'
 		},
 		day: {
 			type: orm.INTEGER,
 			allowNull: false
 		},
-		voterId: {
+		playerId: {
 			type: orm.INTEGER,
 			allowNull: false,
-			unique: 'vote_post_voter_target_game'
+			unique: 'vote_game_post_player_action_target'
+		},
+		action: {
+			type: orm.TEXT,
+			allowNull: false,
+			unique: 'vote_game_post_player_action_target'
 		},
 		targetId: {
 			type: orm.INTEGER,
-			allowNull: false,
-			unique: 'vote_post_voter_target_game'
+			allowNull: true,
+			unique: 'vote_game_post_player_action_target'
 		},
-		gameId: {
-			type: orm.INTEGER,
-			allowNull: false,
-			unique: 'vote_post_voter_target_game'
+		retractedInPost: {
+			type:orm.INTEGER,
+			allowNull: true
 		}
 	});
 };

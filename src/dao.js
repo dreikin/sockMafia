@@ -51,30 +51,30 @@ function createModel(config) {
 	const game = require('./models/game')(db);
 	const segment = require('./models/segment')(db);
 	const roster = require('./models/roster')(db);
-	const vote = require('./models/vote')(db);
+	const action = require('./models/action')(db);
 
 	// Relations
 	// |- 1:1
 	//segment.hasOne(game);
 	// |- 1:N
-	player.hasMany(vote, {as: 'voter', foreignKey: 'voterId'});
-	player.hasMany(vote, {as: 'target', foreignKey: 'targetId'});
-	game.hasMany(vote, {foreignKey: 'gameId'});
+	player.hasMany(action, {as: 'player', foreignKey: 'playerId'});
+	player.hasMany(action, {as: 'target', foreignKey: 'targetId'});
+	game.hasMany(action, {foreignKey: 'gameId'});
 	// game.hasMany(segment);
 	// |- M:N
 	player.belongsToMany(game, {through: roster});
 	game.belongsToMany(player, {through: roster});
 	roster.belongsTo(game);
 	roster.belongsTo(player);
-	vote.belongsTo(player, {as: 'voter', foreignKey: 'voterId'});
-	vote.belongsTo(player, {as: 'target', foreignKey: 'targetId'});
+	action.belongsTo(player, {as: 'player', foreignKey: 'playerId'});
+	action.belongsTo(player, {as: 'target', foreignKey: 'targetId'});
 
 	// model handles
 	Models.players = player;
 	Models.games = game;
 	Models.segments = segment;
 	Models.roster = roster;
-	Models.votes = vote;
+	Models.actions = action;
 
 	initialised = true;
 }
@@ -107,12 +107,21 @@ function initialise(config) {
 module.exports = {
 	// Enums
 
+	action: {
+		for: 'for',
+		vote: 'vote',
+		unvote: 'unvote',
+		nolynch: 'nolynch',
+		kill: 'kill',
+		visit: 'visit',
+		guard: 'guard'
+	},
+
 	playerStatus: {
 		alive: 'alive',
 		dead: 'dead',
 		undead: 'undead',
-		unvote: 'unvote',
-		nolynch: 'nolynch',
+		stump: 'stump',
 		mod: 'mod',
 		spectator: 'spectator',
 		other: 'other'
@@ -179,7 +188,6 @@ module.exports = {
 	},
 
 	archiveAutoGame: function(id) {
-		// Hopefully this cascades to roster, votes, and segments.
 		return db.transaction((t) => {
 			return Models.games.update({
 				id: 0 - id
@@ -220,21 +228,16 @@ module.exports = {
 	ensureGameExists: function(id, createGame) {
 		createGame = typeof createGame !== 'undefined' ? createGame : true;
 		return module.exports.getGameById(id)
-			.then((game) => {
-				if (game) {
-					return Promise.resolve();
-				} else {
-					if (createGame) {
-						return module.exports.addGame(id);
-					}
-					return Promise.reject('Game does not exist');
+			.catch(() => {
+				if (createGame) {
+					return module.exports.addGame(id);
 				}
-		});
+				return Promise.reject('Game does not exist');
+			});
 	},
 
 	getGameId(name) {
 		return module.exports.getGameByName(name)
-			.then((game) => objectExists(game, 'Game'))
 			.then((game) => game.id);
 	},
 
@@ -255,7 +258,6 @@ module.exports = {
 
 	getCurrentDay: function(game) {
 		return module.exports.getGameById(game)
-			.then((gameInstance) => objectExists(gameInstance, 'Game'))
 			.then((gameInstance) => {
 				return gameInstance.day;
 			});
@@ -263,7 +265,6 @@ module.exports = {
 
 	getCurrentTime: function(game) {
 		return module.exports.getGameById(game)
-			.then((gameInstance) => objectExists(gameInstance, 'Game'))
 			.then((gameInstance) => {
 				return gameInstance.time;
 			});
@@ -271,15 +272,13 @@ module.exports = {
 
 	getGameStatus: function(game) {
 		return module.exports.getGameById(game)
-			.then((gameInstance) => objectExists(gameInstance, 'Game'))
 			.then((gameInstance) => {
 				return gameInstance.status;
 			});
 	},
 
 	incrementDay: function(game) {
-		return Models.games.findOne({where: {id: game}})
-			.then((gameInstance) => objectExists(gameInstance, 'Game'))
+		return module.exports.getGameById(game)
 			.then((gameInstance) => {
 				gameInstance.increment('day', {by: 1});
 				gameInstance.time = module.exports.gameTime.morning;
@@ -408,16 +407,7 @@ module.exports = {
 
 	addPlayerToGame: function(game, player, status) {
 		status = typeof status !== 'undefined' ? status : module.exports.playerStatus.alive;
-		const lcPlayer = player.toLowerCase();
-		if (lcPlayer === 'unvote') {
-			status = module.exports.playerStatus.unvote;
-		}
-		if (lcPlayer === 'no-lynch' || lcPlayer === 'nolynch') {
-			status = module.exports.playerStatus.nolynch;
-		}
-
-		return module.exports.getGameById(game)
-			.then(() => module.exports.addPlayer(player))
+		return module.exports.addPlayer(player)
 			.then((playerInstance) => {
 				return Models.roster.findOrCreate({
 					where: {
@@ -468,8 +458,7 @@ module.exports = {
 	},
 
 	getPlayerInGame: function(game, player) {
-		return module.exports.getGameById(game)
-			.then(() => module.exports.getPlayerByName(player))
+		return module.exports.getPlayerByName(player)
 			.then((playerInstance) => {
 				return Models.roster.findOne({
 					where: {
@@ -486,8 +475,10 @@ module.exports = {
 		return module.exports.getPlayerInGame(game, player)
 			.then((rosterInstance) => rosterInstance.playerStatus);
 	},
+
 	getPlayerProperty: function(game, player) {
-		//Expected return: Resolve to 'loved','hated','doublevoted', or 'vanilla', or reject if the player is not in the game.
+		// Expected return: Resolve to 'loved','hated','doublevoted', or 'vanilla',
+		// or reject if the player is not in the game.
 		return Promise.reject('Not yet implemented');
 	},
 
@@ -534,9 +525,7 @@ module.exports = {
 	isPlayerAlive: function(game, player) {
 		return module.exports.getPlayerStatus(game, player)
 			.then((status) => {
-				return (status === module.exports.playerStatus.alive
-					|| status === module.exports.playerStatus.unvote
-					|| status === module.exports.playerStatus.nolynch);
+				return (status === module.exports.playerStatus.alive);
 			});
 	},
 
@@ -551,6 +540,54 @@ module.exports = {
 		return module.exports.getPlayerInGame(game, player)
 			.then((instance) => instance !== null)
 			.catch(() => false);
+	},
+
+	// Action functions
+	/*
+	 * Basic functions:
+	 * - addAction  Add an action by a player.
+	 * - retractAction  Retract an action by a player.
+	 */
+	/*
+	 * Derivative functions:
+	 * - addActionWithoutTarget  Add an action by a player that has no target.
+	 * - addActionWithTarget  Add an action by a player that has a target.
+	 */
+
+	addAction: function(game, post, day, playerId, action, targetId) {
+		return Models.actions.create({
+			gameId: game,
+			post: post,
+			day: day,
+			player: playerId,
+			action: action,
+			target: targetId
+		});
+	},
+
+	retractAction: function() {
+		return Promise.reject('Not yet implemented.');
+	},
+
+	addActionWithoutTarget: function(game, post, player, action) {
+		return Promise.join(
+			exports.getPlayerInGame(game, player),
+			exports.getGameById(game),
+			(playerInstance, gameInstance) => {
+				return exports.addAction(game, post, gameInstance.day, playerInstance.id, action, null);
+			}
+		);
+	},
+
+	addActionWithTarget: function(game, post, player, action, target) {
+		return Promise.join(
+			exports.getPlayerInGame(game, player),
+			exports.getPlayerInGame(game, target),
+			exports.getGameById(game),
+			(playerInstance, targetInstance, gameInstance) => {
+				return exports.addAction(game, post, gameInstance.day, playerInstance.id, action, targetInstance.id);
+			}
+		);
 	},
 
 	// Vote functions
@@ -574,23 +611,11 @@ module.exports = {
 	 */
 
 	addVote: function(game, post, voter, target) {
-		return Promise.join(
-			module.exports.getPlayerInGame(game, voter),
-			module.exports.getPlayerInGame(game, target),
-			module.exports.getGameById(game),
-			(voterInstance, targetInstance, gameInstance) => {
-				return Models.votes.create({
-					post: post,
-					day: gameInstance.day,
-					voterId: voterInstance.playerId,
-					targetId: targetInstance.playerId,
-					gameId: game
-				});
-		});
+		return exports.addActionWithTarget(game, post, voter, exports.action.vote, target);
 	},
 
 	getAllVotesForDay: function(game, day) {
-		return Models.votes.findAll({
+		return Models.actions.findAll({
 			where: {
 				gameId: game,
 				day: day
@@ -654,7 +679,7 @@ module.exports = {
 			module.exports.getPlayerInGame(game, player),
 			module.exports.getGameById(game),
 			(playerInstance, gameInstance) => {
-				return Models.votes.findOne({
+				return Models.actions.findOne({
 					where: {
 						gameId: game,
 						playerId: playerInstance.id,
