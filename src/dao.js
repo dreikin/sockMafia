@@ -140,7 +140,7 @@ module.exports = {
 	},
 
 	playerProperty: {
-		doubleVoter: 'doubleVoter',
+		doubleVoter: 'doublevoter',
 		loved: 'loved',
 		hated: 'hated',
 		vanilla: 'vanilla'
@@ -667,7 +667,7 @@ module.exports = {
 				]
 			},
 			include: [
-				{model: Models.players, as: 'voter'},
+				{model: Models.players, as: 'player'},
 				{model: Models.players, as: 'target'}
 			]
 		});
@@ -681,14 +681,14 @@ module.exports = {
 				return votes.sort((a, b) => b.post - a.post); // latest first
 			})
 			.mapSeries((vote) => {
-				if (seen.has(vote.voter.name)) {
+				if (seen.has(vote.player.name)) {
 					vote.isCurrent = false;
-					vote.rescindedAt = seen.get(vote.voter.name);
-					seen.set(vote.voter.name, vote.post);
+					vote.rescindedAt = seen.get(vote.player.name);
+					seen.set(vote.player.name, vote.post);
 				} else {
 					vote.isCurrent = true;
 					vote.rescindedAt = null;
-					seen.set(vote.voter.name, vote.post);
+					seen.set(vote.player.name, vote.post);
 				}
 
 				return vote;
@@ -704,7 +704,7 @@ module.exports = {
 
 	getPlayersWithoutActiveVotes: function(game, day) {
 		return module.exports.getCurrentVotes(game, day)
-			.map((vote) => vote.voter.id)
+			.map((vote) => vote.player.id)
 			.then((votes) => {
 				return module.exports.getLivingPlayers(game)
 					.filter((entry) => votes.indexOf(entry.player.id) < 0);

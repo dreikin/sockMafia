@@ -298,9 +298,9 @@ exports.setHandler = function (command) {
 	const property = command.args[1];
 	
 	const validProperties = [
-		'loved',
-		'hated',
-		'doublevoter'
+		dao.playerProperty.loved,
+		dao.playerProperty.hated,
+		dao.playerProperty.doubleVoter
 	];
 	
 	return dao.getGameStatus(game)
@@ -870,7 +870,7 @@ exports.listVotesHandler = function (command) {
 		}).then((rows) => {
 			rows.forEach((row) => {
 				const votee = row.target.properName;
-				const voter = row.voter.properName;
+				const voter = row.player.properName;
 
 				if (!data.votes.hasOwnProperty(votee)) {
 					data.votes[votee] = {
