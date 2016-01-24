@@ -643,7 +643,7 @@ module.exports = {
 	
 	revokeAction: function(game, id, revokedInId) {
 		//Not yet implemented
-		Promise.resolve('Implement me')
+		Promise.resolve('Implement me');
 	},
 
 	getPlayersWithoutActiveVotes: function(game, day) {

@@ -492,10 +492,10 @@ function verifyPlayerCanVote(game, voter) {
 		.then(() => mustBeTrue(isDaytime, [game], 'It is not day'));
 };
 
-function revokeCurrentVote(game, voter) {
+function revokeCurrentVote(game, voter, post) {
 	return dao.getCurrentVoteByPlayer(game, voter).then((vote) => {
 		if (vote) {
-			return dao.revokeAction(game, vote.id, post)
+			return dao.revokeAction(game, vote.id, post);
 		} else {
 			return true;
 		}
@@ -559,6 +559,20 @@ exports.nolynchHandler = function (command) {
   * @returns {Promise}        A promise that will resolve when the game is ready
   */
 exports.unvoteHandler = function (command) {
+	const game = command.post.topic_id;
+	const post = command.post.post_number;
+	const voter = command.post.username;
+	
+	function getVoteAttemptText(success) {
+		let text = '@' + command.post.username + (success ? ' unvoted ' : ' tried to unvote ');
+
+		text = text	+ 'in post #<a href="https://what.thedailywtf.com/t/'
+				+ command.post.topic_id + '/' + command.post.post_number + '">'
+				+ command.post.post_number + '</a>.\n\n'
+				+ 'Vote text:\n[quote]\n' + command.input + '\n[/quote]';
+		return text;
+	};
+	
 	/*Validation*/
 	return dao.ensureGameExists(game)
 		.then( () => dao.getGameStatus(game))
@@ -569,7 +583,21 @@ exports.unvoteHandler = function (command) {
 			return Promise.reject('Game already ' + status);
 		})
 		.then(() => verifyPlayerCanVote(game, voter))
-		.then(() => revokeCurrentVote(game, voter));/* Revoke current vote, now a Controller responsibility */
+		.then(() => revokeCurrentVote(game, voter))/* Revoke current vote, now a Controller responsibility */
+		.then((result) => {
+			const text = getVoteAttemptText(true);
+			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+			return true;
+		})
+		.catch((reason) => {
+			/*Error handling*/
+			return getVotingErrorText(reason, voter)
+			.then((text) => {
+				text += '\n<hr />\n';
+				text += getVoteAttemptText(false);					
+				internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+			});
+		});
 };
 
 /**
@@ -597,7 +625,7 @@ exports.voteHandler = function (command) {
 	const voter = command.post.username;
 	// The following regex strips a preceding @ and captures up to either the end of input or one of [.!?, ].
 	// I need to check the rules for names.  The latter part may work just by using `(\w*)` after the `@?`.
-	let target = command.args[0].replace(/^@?(.*?)[.!?, ]?/, '$1');
+	const target = command.args[0].replace(/^@?(.*?)[.!?, ]?/, '$1');
 	
 	function getVoteAttemptText(success) {
 		let text = '@' + command.post.username + (success ? ' voted for ' : ' tried to vote for ') + '@' + target;
@@ -624,13 +652,13 @@ exports.voteHandler = function (command) {
 				mustBeTrue(dao.isPlayerAlive, [game, target], 'Target not alive')
 			]);
 		})     /* Revoke current vote, now a Controller responsibility */
-		.then(() => revokeCurrentVote(game, voter))  /* Add new vote */
+		.then(() => revokeCurrentVote(game, voter, post))  /* Add new vote */
 		.then(() => dao.addVote(game, post, voter, target))
 		.then((result) => {
 			if (!result) {
 				return Promise.reject('Vote failed');
 			}
-			let text = getVoteAttemptText(true);
+			const text = getVoteAttemptText(true);
 			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
 			return true;
 		})
