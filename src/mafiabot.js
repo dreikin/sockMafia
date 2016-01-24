@@ -913,14 +913,14 @@ exports.listVotesHandler = function (command) {
 			let currLookup;
 			players.forEach((target) => {
 				if (data.votes.hasOwnProperty(target)) {
-					currLookup = dao.getPlayerProperty(target).then((property) => {
+					currLookup = dao.getPlayerProperty(id, target).then((property) => {
 						let mod;
-						if (property === 'loved') {
-							mod = 1;
-						} else if (property === 'hated') {
-							mod = -1;
+						if (property === dao.playerProperty.loved) {
+							mod = dao.lynchModifier.loved;
+						} else if (property === dao.playerProperty.hated) {
+							mod = dao.lynchModifier.hated;
 						} else {
-							mod = 0;
+							mod = dao.lynchModifier.vanilla;
 						}
 						
 						data.votes[target].mod = mod;
