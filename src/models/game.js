@@ -33,5 +33,11 @@ module.exports = (db) => {
 			allowNull: true,
 			unique: true
 		}
+	}, {
+		indexes: [
+			{
+				fields: ['name']
+			}
+		]
 	});
 };

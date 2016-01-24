@@ -90,7 +90,7 @@ describe('The Database', () => {
 	describe('Votes table', () => {
 		it('should be a table', (done) => {
 			const db = new sqlite3.Database(fakeConfig.db);
-			db.all('SELECT name FROM sqlite_master WHERE type="table" AND name="votes";', (err, rows) => {
+			db.all('SELECT name FROM sqlite_master WHERE type="table" AND name="actions";', (err, rows) => {
 				expect(err).to.be.null;
 				expect(rows.length).to.equal(1);
 				db.close(() => {
