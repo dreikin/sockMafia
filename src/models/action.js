@@ -5,7 +5,7 @@
 const orm = require('sequelize');
 
 module.exports = (db) => {
-	return db.define('vote', {
+	return db.define('action', {
 		// Primary key
 		id: {
 			type: orm.INTEGER,
