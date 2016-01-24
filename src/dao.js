@@ -599,9 +599,9 @@ module.exports = {
 			gameId: game,
 			post: post,
 			day: day,
-			player: playerId,
+			playerId: playerId,
 			action: action,
-			target: targetId
+			targetId: targetId
 		});
 	},
 
