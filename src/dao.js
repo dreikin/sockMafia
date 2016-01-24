@@ -507,17 +507,17 @@ module.exports = {
 	},
 
 	addPropertyToPlayer: function(game, player, property) {
-		return exports.getPlayerInGame(game, player)
+		return module.exports.getPlayerInGame(game, player)
 			.then((rosterEntry) => {
 				switch (property) {
-					case exports.playerProperty.vanilla:
-						return rosterEntry.update({votes: 1, lynchModifier: exports.lynchModifier.vanilla});
-					case exports.playerProperty.doubleVoter:
-						return rosterEntry.update({votes: 2, lynchModifier: exports.lynchModifier.vanilla});
-					case exports.playerProperty.loved:
-						return rosterEntry.update({votes: 1, lynchModifier: exports.lynchModifier.loved});
-					case exports.playerProperty.hated:
-						return rosterEntry.update({votes: 1, lynchModifier: exports.lynchModifier.hated});
+					case module.exports.playerProperty.vanilla:
+						return rosterEntry.update({votes: 1, lynchModifier: module.exports.lynchModifier.vanilla});
+					case module.exports.playerProperty.doubleVoter:
+						return rosterEntry.update({votes: 2, lynchModifier: module.exports.lynchModifier.vanilla});
+					case module.exports.playerProperty.loved:
+						return rosterEntry.update({votes: 1, lynchModifier: module.exports.lynchModifier.loved});
+					case module.exports.playerProperty.hated:
+						return rosterEntry.update({votes: 1, lynchModifier: module.exports.lynchModifier.hated});
 					default:
 						return Promise.reject('Not a valid property');
 				}
@@ -538,16 +538,16 @@ module.exports = {
 	getPlayerProperty: function(game, player) {
 		// Expected return: Resolve to 'loved','hated','doubleVoter', or 'vanilla',
 		// or reject if the player is not in the game.
-		return exports.getPlayerInGame(game, player)
+		return module.exports.getPlayerInGame(game, player)
 			.then((rosterEntry) => {
 				if (rosterEntry.votes === 2) {
-					return exports.playerProperty.doubleVoter;
-				} else if (rosterEntry.lynchModifier === exports.lynchModifier.loved) {
-					return exports.playerProperty.loved;
-				} else if (rosterEntry.lynchModifier === exports.lynchModifier.hated) {
-					return exports.playerProperty.hated;
-				} else if (rosterEntry.lynchModifier === exports.lynchModifier.vanilla) {
-					return exports.playerProperty.vanilla;
+					return module.exports.playerProperty.doubleVoter;
+				} else if (rosterEntry.lynchModifier === module.exports.lynchModifier.loved) {
+					return module.exports.playerProperty.loved;
+				} else if (rosterEntry.lynchModifier === module.exports.lynchModifier.hated) {
+					return module.exports.playerProperty.hated;
+				} else if (rosterEntry.lynchModifier === module.exports.lynchModifier.vanilla) {
+					return module.exports.playerProperty.vanilla;
 				}
 			});
 	},
@@ -614,7 +614,7 @@ module.exports = {
 			exports.getPlayerInGame(game, player),
 			exports.getGameById(game),
 			(playerInstance, gameInstance) => {
-				return exports.addAction(game, post, gameInstance.day, playerInstance.id, action, null);
+				return module.exports.addAction(game, post, gameInstance.day, playerInstance.id, action, null);
 			}
 		);
 	},
@@ -625,7 +625,7 @@ module.exports = {
 			exports.getPlayerInGame(game, target),
 			exports.getGameById(game),
 			(playerInstance, targetInstance, gameInstance) => {
-				return exports.addAction(game, post, gameInstance.day, playerInstance.id, action, targetInstance.id);
+				return module.exports.addAction(game, post, gameInstance.day, playerInstance.id, action, targetInstance.id);
 			}
 		);
 	},
@@ -651,7 +651,7 @@ module.exports = {
 	 */
 
 	addVote: function(game, post, voter, target) {
-		return exports.addActionWithTarget(game, post, voter, exports.action.vote, target);
+		return module.exports.addActionWithTarget(game, post, voter, module.exports.action.vote, target);
 	},
 
 	getAllVotesForDay: function(game, day) {
@@ -676,7 +676,7 @@ module.exports = {
 	getAllVotesForDaySorted: function(game, day) {
 		const seen = new Map();
 
-		return exports.getAllVotesForDay(game, day)
+		return module.exports.getAllVotesForDay(game, day)
 			.then((votes) => {
 				return votes.sort((a, b) => b.post - a.post); // latest first
 			})
