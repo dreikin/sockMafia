@@ -18,7 +18,11 @@ const Handlebars = require('handlebars');
 const fakeConfig = {
 	mergeObjects: sinon.stub().returns({
 		db: './mafiadbTesting'
-	})
+	}),
+	core: {
+		owner: 'tehNinja',
+		username: 'votebot'
+	}
 };
 
 const browser = {
@@ -835,7 +839,7 @@ describe('mafia', () => {
 						name: 'accalia',
 						properName: 'accalia'
 					},
-					voter: {
+					player: {
 						name: 'yamikuronue',
 						properName: 'Yamikuronue'
 					},
@@ -902,7 +906,7 @@ describe('mafia', () => {
 						name: 'tehninja',
 						properName: 'tehNinja'
 					},
-					voter: {
+					player: {
 						name: 'yamikuronue',
 						properName: 'Yamikuronue'
 					},
@@ -915,7 +919,7 @@ describe('mafia', () => {
 						name: 'accalia',
 						properName: 'accalia'
 					},
-					voter: {
+					player: {
 						name: 'yamikuronue',
 						properName: 'Yamikuronue'
 					},
@@ -986,7 +990,7 @@ describe('mafia', () => {
 						name: 'tehninja',
 						properName: 'tehNinja'
 					},
-					voter: {
+					player: {
 						name: 'yamikuronue',
 						properName: 'Yamikuronue'
 					},
@@ -999,7 +1003,7 @@ describe('mafia', () => {
 						name: 'unvote',
 						properName: 'unvote'
 					},
-					voter: {
+					player: {
 						name: 'yamikuronue',
 						properName: 'Yamikuronue'
 					},
@@ -1012,7 +1016,7 @@ describe('mafia', () => {
 						name: 'accalia',
 						properName: 'accalia'
 					},
-					voter: {
+					player: {
 						name: 'yamikuronue',
 						properName: 'Yamikuronue'
 					},
@@ -1025,7 +1029,7 @@ describe('mafia', () => {
 						name: 'nolynch',
 						properName: 'noLynch'
 					},
-					voter: {
+					player: {
 						name: 'accalia',
 						properName: 'accalia'
 					},
@@ -1096,7 +1100,7 @@ describe('mafia', () => {
 						name: 'accalia',
 						properName: 'accalia'
 					},
-					voter: {
+					player: {
 						name: 'yamikuronue',
 						properName: 'Yamikuronue'
 					},
@@ -1152,7 +1156,7 @@ describe('mafia', () => {
 						name: 'accalia',
 						properName: 'accalia'
 					},
-					voter: {
+					player: {
 						name: 'yamikuronue',
 						properName: 'Yamikuronue'
 					},
@@ -1208,7 +1212,7 @@ describe('mafia', () => {
 						name: 'accalia',
 						properName: 'accalia'
 					},
-					voter: {
+					player: {
 						name: 'yamikuronue',
 						properName: 'Yamikuronue'
 					},

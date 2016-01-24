@@ -177,6 +177,7 @@ function registerModCommands(events) {
 	events.onCommand('new-day', 'move on to a new day (mod only)', exports.dayHandler, () => 0);
 	events.onCommand('kill', 'kill a player (mod only)', exports.killHandler, () => 0);
 	events.onCommand('end', 'end the game (mod only)', exports.finishHandler, () => 0);
+	events.onCommand('set', 'set a property on a player (mod only)', exports.setHandler, () => 0);
 }
 
 function registerCommands(events) {
@@ -184,6 +185,30 @@ function registerCommands(events) {
 	registerPlayerCommands(events);
 	registerModCommands(events);
 }
+
+/**
+ * Register the mods listed in the configuration.
+ *
+ * @param {Number} game Thread number for the game.
+ * @param {string[]} mods Array of mod names to add to the game.
+ */
+/*eslint-disable no-console*/
+function registerMods(game, mods) {
+	return dao.ensureGameExists(game)
+		.then(() => Promise.mapSeries(
+			mods,
+			function(mod) {
+				console.log('Mafia: Adding mod: ' + mod);
+				return dao.addMod(game, mod)
+					.catch((err) => {
+						console.log('Mafia: Adding mod: failed to add mod: ' + mod
+							+ '\n\tReason: ' + err);
+						return Promise.resolve();
+					});
+			}
+		));
+}
+/*eslint-enable no-console*/
 
 /**
  * Register the players listed in the configuration.
@@ -292,15 +317,16 @@ exports.startHandler = function (command) {
 };
 
 exports.setHandler = function (command) {
-	const game = command.post.topic_id;
 	const mod = command.post.username;
-	const target = command.args[0].replace(/^@?(.*?)[.!?, ]?/, '$1');
+	const target = command.args[0].replace(/^@?(.*?)[.!?, ]?$/, '$1');
 	const property = command.args[1];
+	const game = command.args[2];
 	
 	const validProperties = [
-		'loved',
-		'hated',
-		'doublevoter'
+		dao.playerProperty.loved,
+		dao.playerProperty.hated,
+		dao.playerProperty.doubleVoter,
+		dao.playerProperty.vanilla
 	];
 	
 	return dao.getGameStatus(game)
@@ -419,7 +445,7 @@ exports.killHandler = function (command) {
 	const mod = command.post.username;
 	// The following regex strips a preceding @ and captures up to either the end of input or one of [.!?, ].
 	// I need to check the rules for names.  The latter part may work just by using `(\w*)` after the `@?`.
-	const target = command.args[0].replace(/^@?(.*?)[.!?, ]?/, '$1');
+	const target = command.args[0].replace(/^@?(.*?)[.!?, ]?$/, '$1');
 	
 	return dao.getGameStatus(game)
 		.then((status) => {
@@ -550,7 +576,7 @@ exports.voteHandler = function (command) {
 	const voter = command.post.username;
 	// The following regex strips a preceding @ and captures up to either the end of input or one of [.!?, ].
 	// I need to check the rules for names.  The latter part may work just by using `(\w*)` after the `@?`.
-	let target = command.args[0].replace(/^@?(.*?)[.!?, ]?/, '$1');
+	let target = command.args[0].replace(/^@?(.*?)[.!?, ]?$/, '$1');
 	if (target.toLowerCase() === 'no-lynch') {
 		target = 'nolynch';
 	}
@@ -579,7 +605,7 @@ exports.voteHandler = function (command) {
 			}
 			let text;
 
-			if (target.toLowerCase() === dao.playerStatus.unvote) {
+			if (target.toLowerCase() === dao.action.unvote) {
 				text = '@' + command.post.username + ' rescinded their vote';
 			} else {
 				text = '@' + command.post.username + ' voted for @' + target;
@@ -618,7 +644,7 @@ exports.voteHandler = function (command) {
 
 			if (reason === 'Voter not in game') {
 				text = '@' + voter + ': You are not yet a player.\n'
-					+ 'Please use `@' + internals.configuration.username + ' join` to join the game.';
+					+ 'Please use `@' + internals.username + ' join` to join the game.';
 			} else if (reason === 'Voter not alive') {
 				text = 'Aaagh! Ghosts!\n'
 					+ '(@' + voter + ': You are no longer among the living.)';
@@ -629,7 +655,7 @@ exports.voteHandler = function (command) {
 				text = '@' + voter + ': You would be wise to not speak ill of the dead.';
 			} else if (reason === 'Vote failed') {
 				text = ':wtf:\nSorry, @' + voter + ': your vote failed.  No, I don\'t know why.'
-					+ ' You\'ll have to ask @' + internals.configuration.owner + ' about that.';
+					+ ' You\'ll have to ask @' + internals.owner + ' about that.';
 			} else {
 				text += '\n' + reason;
 			}
@@ -870,7 +896,7 @@ exports.listVotesHandler = function (command) {
 		}).then((rows) => {
 			rows.forEach((row) => {
 				const votee = row.target.properName;
-				const voter = row.voter.properName;
+				const voter = row.player.properName;
 
 				if (!data.votes.hasOwnProperty(votee)) {
 					data.votes[votee] = {
@@ -883,7 +909,6 @@ exports.listVotesHandler = function (command) {
 
 				if (row.isCurrent) {
 					data.votes[votee].num++;
-					data.votes[votee].percent = (data.votes[votee].num / data.toExecute) * 100;
 					currentlyVoting.push(voter);
 				}
 
@@ -913,14 +938,14 @@ exports.listVotesHandler = function (command) {
 			let currLookup;
 			players.forEach((target) => {
 				if (data.votes.hasOwnProperty(target)) {
-					currLookup = dao.getPlayerProperty(target).then((property) => {
+					currLookup = dao.getPlayerProperty(id, target).then((property) => {
 						let mod;
-						if (property === 'loved') {
-							mod = 1;
-						} else if (property === 'hated') {
-							mod = -1;
+						if (property === dao.playerProperty.loved) {
+							mod = dao.lynchModifier.loved;
+						} else if (property === dao.playerProperty.hated) {
+							mod = dao.lynchModifier.hated;
 						} else {
-							mod = 0;
+							mod = dao.lynchModifier.vanilla;
 						}
 						
 						data.votes[target].mod = mod;
@@ -985,6 +1010,8 @@ exports.prepare = function prepare(plugConfig, config, events, browser) {
 	}
 	internals.events = events;
 	internals.browser = browser;
+	internals.owner = config.core.owner;
+	internals.username = config.core.username;
 	internals.configuration = config.mergeObjects(true, exports.defaultConfig, plugConfig);
 	return dao.createDB(internals.configuration)
 		.then(() => dao.ensureGameExists(plugConfig.thread))
@@ -1006,13 +1033,10 @@ exports.prepare = function prepare(plugConfig, config, events, browser) {
 		})
 		.then(() => {
 			if (plugConfig.mods) {
-				return Promise.each(
-					plugConfig.mods,
-					(mod) => dao.addMod(plugConfig.thread, mod)
-				);
+				return registerMods(plugConfig.thread, plugConfig.mods);
 			} else {
 				return Promise.resolve();
-			}			
+			}
 		})
 		.then(() => {
 			registerCommands(events);
