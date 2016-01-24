@@ -301,7 +301,8 @@ exports.setHandler = function (command) {
 	const validProperties = [
 		dao.playerProperty.loved,
 		dao.playerProperty.hated,
-		dao.playerProperty.doubleVoter
+		dao.playerProperty.doubleVoter,
+		dao.playerProperty.vanilla
 	];
 	
 	return dao.getGameStatus(game)
