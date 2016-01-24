@@ -177,6 +177,7 @@ function registerModCommands(events) {
 	events.onCommand('new-day', 'move on to a new day (mod only)', exports.dayHandler, () => 0);
 	events.onCommand('kill', 'kill a player (mod only)', exports.killHandler, () => 0);
 	events.onCommand('end', 'end the game (mod only)', exports.finishHandler, () => 0);
+	events.onCommand('set', 'set a property on a player (mod only)', exports.setHandler, () => 0);
 }
 
 function registerCommands(events) {
@@ -292,10 +293,10 @@ exports.startHandler = function (command) {
 };
 
 exports.setHandler = function (command) {
-	const game = command.post.topic_id;
 	const mod = command.post.username;
 	const target = command.args[0].replace(/^@?(.*?)[.!?, ]?$/, '$1');
 	const property = command.args[1];
+	const game = command.args[2];
 	
 	const validProperties = [
 		dao.playerProperty.loved,
@@ -883,7 +884,6 @@ exports.listVotesHandler = function (command) {
 
 				if (row.isCurrent) {
 					data.votes[votee].num++;
-					data.votes[votee].percent = (data.votes[votee].num / data.toExecute) * 100;
 					currentlyVoting.push(voter);
 				}
 

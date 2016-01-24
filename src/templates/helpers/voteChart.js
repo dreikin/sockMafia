@@ -1,9 +1,10 @@
 'use strict';
 const Handlebars = require('handlebars');
 
-module.exports = function(percent, modifier, toExecute) {
+module.exports = function(votes, modifier, toExecute) {
 	let fillColor, bgColor;
-	const hammer = Math.round((100 - percent) / 100 * (toExecute + modifier)) === 1;
+	const percent = votes / (toExecute + modifier) * 100;
+	const hammer = toExecute + modifier - votes  === 1;
 	
 	if (percent >= 100) {
 		fillColor = '#560000';
