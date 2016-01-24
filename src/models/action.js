@@ -46,5 +46,11 @@ module.exports = (db) => {
 			type:orm.INTEGER,
 			allowNull: true
 		}
+	}, {
+		indexes: [
+			{
+				fields: ['gameId', 'day', 'action', 'post', 'playerId', 'targetId', 'retractedInPost']
+			}
+		]
 	});
 };

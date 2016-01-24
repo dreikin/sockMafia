@@ -24,5 +24,11 @@ module.exports = (db) => {
 			allowNull: false,
 			unique: true
 		}
+	}, {
+		indexes: [
+			{
+				fields: ['name']
+			}
+		]
 	});
 };

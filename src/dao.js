@@ -62,8 +62,8 @@ function createModel(config) {
 	game.hasMany(action, {foreignKey: 'gameId'});
 	// game.hasMany(segment);
 	// |- M:N
-	player.belongsToMany(game, {through: roster});
-	game.belongsToMany(player, {through: roster});
+	player.belongsToMany(game, {through: roster, foreignKey: 'playerId'});
+	game.belongsToMany(player, {through: roster, foreignKey: 'gameId'});
 	roster.belongsTo(game);
 	roster.belongsTo(player);
 	action.belongsTo(player, {as: 'player', foreignKey: 'playerId'});
@@ -117,16 +117,6 @@ module.exports = {
 		guard: 'guard'
 	},
 
-	playerStatus: {
-		alive: 'alive',
-		dead: 'dead',
-		undead: 'undead',
-		stump: 'stump',
-		mod: 'mod',
-		spectator: 'spectator',
-		other: 'other'
-	},
-
 	gameTime: {
 		morning: 'morning',
 		day: 'day',
@@ -141,6 +131,29 @@ module.exports = {
 		paused: 'paused',
 		abandoned: 'abandoned',
 		finished: 'finished'
+	},
+
+	lynchModifier: {
+		loved: 1,
+		vanilla: 0,
+		hated: -1
+	},
+
+	playerProperty: {
+		doubleVoter: 'doubleVoter',
+		loved: 'loved',
+		hated: 'hated',
+		vanilla: 'vanilla'
+	},
+
+	playerStatus: {
+		alive: 'alive',
+		dead: 'dead',
+		undead: 'undead',
+		stump: 'stump',
+		mod: 'mod',
+		spectator: 'spectator',
+		other: 'other'
 	},
 
 	// Database functions
@@ -308,12 +321,12 @@ module.exports = {
 		});
 	},
 
-	setGameStatus: function(id, status) {
+	setGameStatus: function(game, status) {
 		return Models.games.update({
 			status: status
 		}, {
 			where: {
-				id: id
+				id: game
 			}
 		});
 	},
@@ -411,8 +424,8 @@ module.exports = {
 			.then((playerInstance) => {
 				return Models.roster.findOrCreate({
 					where: {
-						playerId: playerInstance.id,
 						gameId: game,
+						playerId: playerInstance.id,
 						playerStatus: status
 					}
 				});
@@ -471,15 +484,15 @@ module.exports = {
 			.then((rosterInstance) => objectExists(rosterInstance, 'Roster entry for player'));
 	},
 
-	getPlayerStatus: function(game, player) {
-		return module.exports.getPlayerInGame(game, player)
-			.then((rosterInstance) => rosterInstance.playerStatus);
-	},
-
 	getPlayerProperty: function(game, player) {
 		// Expected return: Resolve to 'loved','hated','doublevoted', or 'vanilla',
 		// or reject if the player is not in the game.
 		return Promise.reject('Not yet implemented');
+	},
+
+	getPlayerStatus: function(game, player) {
+		return module.exports.getPlayerInGame(game, player)
+			.then((rosterInstance) => rosterInstance.playerStatus);
 	},
 
 	getSpectators: function(game) {
