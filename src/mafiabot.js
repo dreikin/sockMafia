@@ -294,7 +294,7 @@ exports.startHandler = function (command) {
 exports.setHandler = function (command) {
 	const game = command.post.topic_id;
 	const mod = command.post.username;
-	const target = command.args[0].replace(/^@?(.*?)[.!?, ]?/, '$1');
+	const target = command.args[0].replace(/^@?(.*?)[.!?, ]?$/, '$1');
 	const property = command.args[1];
 	
 	const validProperties = [
@@ -419,7 +419,7 @@ exports.killHandler = function (command) {
 	const mod = command.post.username;
 	// The following regex strips a preceding @ and captures up to either the end of input or one of [.!?, ].
 	// I need to check the rules for names.  The latter part may work just by using `(\w*)` after the `@?`.
-	const target = command.args[0].replace(/^@?(.*?)[.!?, ]?/, '$1');
+	const target = command.args[0].replace(/^@?(.*?)[.!?, ]?$/, '$1');
 	
 	return dao.getGameStatus(game)
 		.then((status) => {
@@ -618,7 +618,7 @@ exports.voteHandler = function (command) {
 
 			if (reason === 'Voter not in game') {
 				text = '@' + voter + ': You are not yet a player.\n'
-					+ 'Please use `@' + internals.configuration.username + ' join` to join the game.';
+					+ 'Please use `@' + internals.username + ' join` to join the game.';
 			} else if (reason === 'Voter not alive') {
 				text = 'Aaagh! Ghosts!\n'
 					+ '(@' + voter + ': You are no longer among the living.)';
@@ -629,7 +629,7 @@ exports.voteHandler = function (command) {
 				text = '@' + voter + ': You would be wise to not speak ill of the dead.';
 			} else if (reason === 'Vote failed') {
 				text = ':wtf:\nSorry, @' + voter + ': your vote failed.  No, I don\'t know why.'
-					+ ' You\'ll have to ask @' + internals.configuration.owner + ' about that.';
+					+ ' You\'ll have to ask @' + internals.owner + ' about that.';
 			} else {
 				text += '\n' + reason;
 			}
@@ -985,6 +985,8 @@ exports.prepare = function prepare(plugConfig, config, events, browser) {
 	}
 	internals.events = events;
 	internals.browser = browser;
+	internals.owner = config.core.owner;
+	internals.username = config.core.username;
 	internals.configuration = config.mergeObjects(true, exports.defaultConfig, plugConfig);
 	return dao.createDB(internals.configuration)
 		.then(() => dao.ensureGameExists(plugConfig.thread))
@@ -1012,7 +1014,7 @@ exports.prepare = function prepare(plugConfig, config, events, browser) {
 				);
 			} else {
 				return Promise.resolve();
-			}			
+			}
 		})
 		.then(() => {
 			registerCommands(events);
