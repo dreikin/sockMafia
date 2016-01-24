@@ -611,8 +611,8 @@ module.exports = {
 
 	addActionWithoutTarget: function(game, post, player, action) {
 		return Promise.join(
-			exports.getPlayerInGame(game, player),
-			exports.getGameById(game),
+			module.exports.getPlayerInGame(game, player),
+			module.exports.getGameById(game),
 			(playerInstance, gameInstance) => {
 				return module.exports.addAction(game, post, gameInstance.day, playerInstance.id, action, null);
 			}
@@ -621,9 +621,9 @@ module.exports = {
 
 	addActionWithTarget: function(game, post, player, action, target) {
 		return Promise.join(
-			exports.getPlayerInGame(game, player),
-			exports.getPlayerInGame(game, target),
-			exports.getGameById(game),
+			module.exports.getPlayerInGame(game, player),
+			module.exports.getPlayerInGame(game, target),
+			module.exports.getGameById(game),
 			(playerInstance, targetInstance, gameInstance) => {
 				return module.exports.addAction(game, post, gameInstance.day, playerInstance.id, action, targetInstance.id);
 			}
@@ -660,10 +660,10 @@ module.exports = {
 				gameId: game,
 				day: day,
 				action: [
-					exports.action.vote,
-					exports.action.for,
-					exports.action.unvote,
-					exports.action.nolynch
+					module.exports.action.vote,
+					module.exports.action.for,
+					module.exports.action.unvote,
+					module.exports.action.nolynch
 				]
 			},
 			include: [
@@ -731,10 +731,10 @@ module.exports = {
 						playerId: playerInstance.id,
 						day: gameInstance.day,
 						action: [
-							exports.action.vote,
-							exports.action.for,
-							exports.action.unvote,
-							exports.action.nolynch
+							module.exports.action.vote,
+							module.exports.action.for,
+							module.exports.action.unvote,
+							module.exports.action.nolynch
 						]
 					}
 				});
