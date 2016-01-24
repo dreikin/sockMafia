@@ -405,8 +405,10 @@ module.exports = {
 	/*
 	 * Derivative functions:
 	 * - addMod  Add a moderator to a game's roster.
+	 * - addPropertyToPlayer  Add a property to a player.
 	 * - addSpectator  Add a spectator to a game's roster.
 	 * - getNumToLynch  Get the number of votes needed to lynch someone (or no-lynch).
+	 * - getPlayerProperty Get the property currently set on a player.
 	 * - getPlayerStatus  Get the status of a player in a game.
 	 * - isPlayerInGame  Return whether a player is in a game.
 	 * - killPlayer  Set a player's status to dead.
@@ -430,10 +432,6 @@ module.exports = {
 					}
 				});
 			});
-	},
-	
-	addPropertyToPlayer: function(game, player, property) {
-		return Promise.reject('Not yet implemented');
 	},
 
 	getAllPlayers: function(game) {
@@ -484,12 +482,6 @@ module.exports = {
 			.then((rosterInstance) => objectExists(rosterInstance, 'Roster entry for player'));
 	},
 
-	getPlayerProperty: function(game, player) {
-		// Expected return: Resolve to 'loved','hated','doublevoted', or 'vanilla',
-		// or reject if the player is not in the game.
-		return Promise.reject('Not yet implemented');
-	},
-
 	getPlayerStatus: function(game, player) {
 		return module.exports.getPlayerInGame(game, player)
 			.then((rosterInstance) => rosterInstance.playerStatus);
@@ -514,6 +506,24 @@ module.exports = {
 		return module.exports.addPlayerToGame(game, mod, module.exports.playerStatus.mod);
 	},
 
+	addPropertyToPlayer: function(game, player, property) {
+		return exports.getPlayerInGame(game, player)
+			.then((rosterEntry) => {
+				switch (property) {
+					case exports.playerProperty.vanilla:
+						return rosterEntry.update({votes: 1, lynchModifier: exports.lynchModifier.vanilla});
+					case exports.playerProperty.doubleVoter:
+						return rosterEntry.update({votes: 2, lynchModifier: exports.lynchModifier.vanilla});
+					case exports.playerProperty.loved:
+						return rosterEntry.update({votes: 1, lynchModifier: exports.lynchModifier.loved});
+					case exports.playerProperty.hated:
+						return rosterEntry.update({votes: 1, lynchModifier: exports.lynchModifier.hated});
+					default:
+						return Promise.reject('Not a valid property');
+				}
+			});
+	},
+
 	addSpectator: function(game, spectator) {
 		return module.exports.addPlayerToGame(game, spectator, module.exports.playerStatus.spectator);
 	},
@@ -522,6 +532,23 @@ module.exports = {
 		return module.exports.getLivingPlayers(game)
 			.then((players) => {
 				return Math.ceil((players.length + 1) / 2);
+			});
+	},
+
+	getPlayerProperty: function(game, player) {
+		// Expected return: Resolve to 'loved','hated','doubleVoter', or 'vanilla',
+		// or reject if the player is not in the game.
+		return exports.getPlayerInGame(game, player)
+			.then((rosterEntry) => {
+				if (rosterEntry.votes === 2) {
+					return exports.playerProperty.doubleVoter;
+				} else if (rosterEntry.lynchModifier === exports.lynchModifier.loved) {
+					return exports.playerProperty.loved;
+				} else if (rosterEntry.lynchModifier === exports.lynchModifier.hated) {
+					return exports.playerProperty.hated;
+				} else if (rosterEntry.lynchModifier === exports.lynchModifier.vanilla) {
+					return exports.playerProperty.vanilla;
+				}
 			});
 	},
 
