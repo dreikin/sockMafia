@@ -567,9 +567,46 @@ function getVotingErrorText(reason, voter, target) {
   * @returns {Promise}        A promise that will resolve when the game is ready
   */
 exports.nolynchHandler = function (command) {
-	command.input = '!vote for nolynch';
-	command.args[0] = 'nolynch';
-	return exports.voteHandler(command);
+	const game = command.post.topic_id;
+	const post = command.post.post_number;
+	const voter = command.post.username;
+	
+	function getVoteAttemptText(success) {
+		let text = '@' + command.post.username +  (success ? ' voted for ' : ' tried to vote for ') + 'no-lynch ';
+
+		text = text	+ 'in post #<a href="https://what.thedailywtf.com/t/'
+				+ command.post.topic_id + '/' + command.post.post_number + '">'
+				+ command.post.post_number + '</a>.\n\n'
+				+ 'Vote text:\n[quote]\n' + command.input + '\n[/quote]';
+		return text;
+	};
+	
+	/*Validation*/
+	return dao.ensureGameExists(game)
+		.then( () => dao.getGameStatus(game))
+		.then((status) => {
+			if (status === dao.gameStatus.running) {
+				return Promise.resolve();
+			}
+			return Promise.reject('Game already ' + status);
+		})
+		.then(() => verifyPlayerCanVote(game, voter))
+		.then(() => revokeCurrentVote(game, voter))/* Revoke current vote, now a Controller responsibility */
+		.then(() => dao.addActionWithoutTarget(game, post, voter, 'nolynch'))
+		.then((result) => {
+			const text = getVoteAttemptText(true);
+			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+			return true;
+		})
+		.catch((reason) => {
+			/*Error handling*/
+			return getVotingErrorText(reason, voter)
+			.then((text) => {
+				text += '\n<hr />\n';
+				text += getVoteAttemptText(false);					
+				internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+			});
+		});
 };
 
 /**
