@@ -339,39 +339,6 @@ describe('mafia', () => {
 			});
 		});
 		
-		it('should echo when you rescind your vote', () => {
-			const command = {
-				post: {
-					username: 'tehNinja',
-					'topic_id': 12345,
-					'post_number': 98765
-				},
-				args: ['@unvote'],
-				input: '!for @unvote'
-			};
-
-			mafia.internals.browser = browser;
-			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
-			sandbox.stub(mafiaDAO, 'getGameStatus').resolves(mafiaDAO.gameStatus.running);
-			sandbox.stub(mafiaDAO, 'isPlayerInGame').resolves(true);
-			sandbox.stub(mafiaDAO, 'isPlayerAlive').resolves(true);
-			sandbox.stub(mafiaDAO, 'getCurrentTime').resolves(mafiaDAO.gameTime.day);
-			sandbox.stub(mafiaDAO, 'getNumToLynch').resolves(100);
-			sandbox.stub(mafiaDAO, 'getCurrentDay').resolves(1);
-			sandbox.stub(mafiaDAO, 'getNumVotesForPlayer').resolves(1);
-			sandbox.stub(mafiaDAO, 'addVote').resolves(true);
-			sandbox.stub(mafiaDAO, 'getPlayerProperty').resolves('vanilla');
-			sandbox.stub(mafiaDAO, 'getCurrentVoteByPlayer').resolves(undefined);
-
-			return mafia.voteHandler(command).then(() => {
-				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
-
-				const output = browser.createPost.getCall(0).args[2];
-				output.should.include('@tehNinja rescinded their vote in post ' +
-					'#<a href="https://what.thedailywtf.com/t/12345/98765">98765</a>.');
-			});
-		});
-		
 		it('should echo your vote when successful', () => {
 			const command = {
 				post: {

@@ -484,6 +484,46 @@ exports.finishHandler = function (command) {
 
 // Player commands
 
+/*Voting helpers*/
+
+function verifyPlayerCanVote(game, voter) {
+	return mustBeTrue(dao.isPlayerInGame, [game, voter], 'Voter not in game')
+		.then(() => mustBeTrue(dao.isPlayerAlive, [game, voter], 'Voter not alive'))
+		.then(() => mustBeTrue(isDaytime, [game], 'It is not day'));
+};
+
+function revokeCurrentVote(game, voter) {
+	return dao.getCurrentVoteByPlayer(game, voter).then((vote) => {
+		if (vote) {
+			return dao.revokeAction(game, vote.id, post)
+		} else {
+			return true;
+		}
+	});
+};
+
+function getVotingErrorText(reason, voter, target) {
+	let text = ':wtf:';
+
+	if (reason === 'Voter not in game') {
+		text = '@' + voter + ': You are not yet a player.\n'
+			+ 'Please use `@' + internals.configuration.username + ' join` to join the game.';
+	} else if (reason === 'Voter not alive') {
+		text = 'Aaagh! Ghosts!\n'
+			+ '(@' + voter + ': You are no longer among the living.)';
+	} else if (reason === 'Target not in game') {
+		text = 'Who? I\'m sorry, @' + voter + ' but your princess is in another castle.\n'
+			+ '(' + target + ' is not in this game.)';
+	} else if (reason === 'Target not alive') {
+		text = '@' + voter + ': You would be wise to not speak ill of the dead.';
+	} else if (reason === 'Vote failed') {
+		text = ':wtf:\nSorry, @' + voter + ': your vote failed.  No, I don\'t know why.'
+			+ ' You\'ll have to ask @' + internals.configuration.owner + ' about that.';
+	} else {
+		text += '\n' + reason;
+	}			
+	return Promise.resolve(text);
+};
 /**
   * nolynch: Vote to not lynch this day
   * Must be used in the game thread.
@@ -519,10 +559,17 @@ exports.nolynchHandler = function (command) {
   * @returns {Promise}        A promise that will resolve when the game is ready
   */
 exports.unvoteHandler = function (command) {
-	command.input = '!vote for unvote';
-	command.args[0] = 'unvote';
-	return exports.voteHandler(command);
-
+	/*Validation*/
+	return dao.ensureGameExists(game)
+		.then( () => dao.getGameStatus(game))
+		.then((status) => {
+			if (status === dao.gameStatus.running) {
+				return Promise.resolve();
+			}
+			return Promise.reject('Game already ' + status);
+		})
+		.then(() => verifyPlayerCanVote(game, voter))
+		.then(() => revokeCurrentVote(game, voter));/* Revoke current vote, now a Controller responsibility */
 };
 
 /**
@@ -551,11 +598,18 @@ exports.voteHandler = function (command) {
 	// The following regex strips a preceding @ and captures up to either the end of input or one of [.!?, ].
 	// I need to check the rules for names.  The latter part may work just by using `(\w*)` after the `@?`.
 	let target = command.args[0].replace(/^@?(.*?)[.!?, ]?/, '$1');
-	if (target.toLowerCase() === 'no-lynch') {
-		target = 'nolynch';
-	}
 	
-	return dao.ensureGameExists(game)
+	function getVoteAttemptText(success) {
+		let text = '@' + command.post.username + (success ? ' voted for ' : ' tried to vote for ') + '@' + target;
+
+		text = text	+ ' in post #<a href="https://what.thedailywtf.com/t/'
+				+ command.post.topic_id + '/' + command.post.post_number + '">'
+				+ command.post.post_number + '</a>.\n\n'
+				+ 'Vote text:\n[quote]\n' + command.input + '\n[/quote]';
+		return text;
+	};
+	
+	return dao.ensureGameExists(game) /*Validation*/
 		.then( () => dao.getGameStatus(game))
 		.then((status) => {
 			if (status === dao.gameStatus.running) {
@@ -563,44 +617,24 @@ exports.voteHandler = function (command) {
 			}
 			return Promise.reject('Game already ' + status);
 		})
+		.then(() => verifyPlayerCanVote(game, voter))
 		.then(() => {
 			return Promise.all([
-				mustBeTrue(dao.isPlayerInGame, [game, voter], 'Voter not in game'),
-				mustBeTrue(dao.isPlayerAlive, [game, voter], 'Voter not alive'),
 				mustBeTrue(dao.isPlayerInGame, [game, target], 'Target not in game'),
-				mustBeTrue(dao.isPlayerAlive, [game, target], 'Target not alive'),
-				mustBeTrue(isDaytime, [game], 'It is not day')
+				mustBeTrue(dao.isPlayerAlive, [game, target], 'Target not alive')
 			]);
-		}) /* Revoke current vote, now a Controller responsibility */
-		.then(() => dao.getCurrentVoteByPlayer(game, voter))
-		.then((vote) => {
-			if (vote) {
-				return dao.revokeAction(game, vote.id, post)
-			} else {
-				return true;
-			}
-		})
+		})     /* Revoke current vote, now a Controller responsibility */
+		.then(() => revokeCurrentVote(game, voter))  /* Add new vote */
 		.then(() => dao.addVote(game, post, voter, target))
 		.then((result) => {
 			if (!result) {
 				return Promise.reject('Vote failed');
 			}
-			let text;
-
-			if (target.toLowerCase() === dao.playerStatus.unvote) {
-				text = '@' + command.post.username + ' rescinded their vote';
-			} else {
-				text = '@' + command.post.username + ' voted for @' + target;
-			}
-
-			text = text	+ ' in post #<a href="https://what.thedailywtf.com/t/'
-				+ command.post.topic_id + '/' + command.post.post_number + '">'
-				+ command.post.post_number + '</a>.\n\n'
-				+ 'Vote text:\n[quote]\n' + command.input + '\n[/quote]';
+			let text = getVoteAttemptText(true);
 			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
 			return true;
 		})
-		.then(() => dao.getCurrentDay(game))
+		.then(() => dao.getCurrentDay(game))   /*Check for auto-lynch*/
 		.then((day) => {
 			return Promise.join(
 				dao.getNumToLynch(game),
@@ -621,37 +655,15 @@ exports.voteHandler = function (command) {
 					}
 				}
 			);
-		}).catch((reason) => {
-			let text = ':wtf:';
-
-			if (reason === 'Voter not in game') {
-				text = '@' + voter + ': You are not yet a player.\n'
-					+ 'Please use `@' + internals.configuration.username + ' join` to join the game.';
-			} else if (reason === 'Voter not alive') {
-				text = 'Aaagh! Ghosts!\n'
-					+ '(@' + voter + ': You are no longer among the living.)';
-			} else if (reason === 'Target not in game') {
-				text = 'Who? I\'m sorry, @' + voter + ' but your princess is in another castle.\n'
-					+ '(' + target + ' is not in this game.)';
-			} else if (reason === 'Target not alive') {
-				text = '@' + voter + ': You would be wise to not speak ill of the dead.';
-			} else if (reason === 'Vote failed') {
-				text = ':wtf:\nSorry, @' + voter + ': your vote failed.  No, I don\'t know why.'
-					+ ' You\'ll have to ask @' + internals.configuration.owner + ' about that.';
-			} else {
-				text += '\n' + reason;
-			}
-
-			text += '\n<hr />\n';
-			text += '@' + command.post.username + ' tried to vote for ' + target
-				+ ' in post #<a href="https://what.thedailywtf.com/t/'
-				+ command.post.topic_id + '/' + command.post.post_number + '">'
-				+ command.post.post_number + '</a>.\n\n'
-				+ 'Vote text:\n[quote="' + command.post.username
-				+ ', post:' + command.post.post_number
-				+ ', topic:' + command.post.topic_id + '"]\n'
-				+ command.input + '\n[/quote]';
-			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+		})
+		.catch((reason) => {
+			/*Error handling*/
+			return getVotingErrorText(reason, voter, target)
+			.then((text) => {
+				text += '\n<hr />\n';
+				text += getVoteAttemptText(false);					
+				internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+			});
 		});
 };
 
