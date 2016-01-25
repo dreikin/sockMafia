@@ -520,6 +520,9 @@ function verifyPlayerCanVote(game, voter) {
 
 function revokeCurrentVote(game, voter, post) {
 	return dao.getCurrentVoteByPlayer(game, voter).then((vote) => {
+		if (vote && vote.constructor === Array) {
+			vote = vote[0];
+		}
 		if (vote) {
 			return dao.revokeAction(game, vote.id, post);
 		} else {
