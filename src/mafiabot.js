@@ -981,8 +981,8 @@ exports.listVotesHandler = function (command) {
 			return dao.getAllVotesForDaySorted(id, data.day);
 		}).then((rows) => {
 			rows.forEach((row) => {
-				const votee = row.target.properName;
 				const voter = row.player.properName;
+				const votee = (row.action === dao.action.nolynch ? 'No lynch' : row.target.properName);
 
 				if (!data.votes.hasOwnProperty(votee)) {
 					data.votes[votee] = {
