@@ -516,7 +516,7 @@ function verifyPlayerCanVote(game, voter) {
 	return mustBeTrue(dao.isPlayerInGame, [game, voter], 'Voter not in game')
 		.then(() => mustBeTrue(dao.isPlayerAlive, [game, voter], 'Voter not alive'))
 		.then(() => mustBeTrue(isDaytime, [game], 'It is not day'));
-};
+}
 
 function revokeCurrentVote(game, voter, post) {
 	return dao.getCurrentVoteByPlayer(game, voter).then((vote) => {
@@ -529,7 +529,7 @@ function revokeCurrentVote(game, voter, post) {
 			return true;
 		}
 	});
-};
+}
 
 function getVotingErrorText(reason, voter, target) {
 	let text = ':wtf:';
@@ -550,9 +550,10 @@ function getVotingErrorText(reason, voter, target) {
 			+ ' You\'ll have to ask @' + internals.configuration.owner + ' about that.';
 	} else {
 		text += '\n' + reason;
-	}			
+	}
 	return Promise.resolve(text);
-};
+}
+
 /**
   * nolynch: Vote to not lynch this day
   * Must be used in the game thread.
@@ -582,7 +583,7 @@ exports.nolynchHandler = function (command) {
 				+ command.post.post_number + '</a>.\n\n'
 				+ 'Vote text:\n[quote]\n' + command.input + '\n[/quote]';
 		return text;
-	};
+	}
 	
 	/*Validation*/
 	return dao.ensureGameExists(game)
@@ -596,7 +597,7 @@ exports.nolynchHandler = function (command) {
 		.then(() => verifyPlayerCanVote(game, voter))
 		.then(() => revokeCurrentVote(game, voter))/* Revoke current vote, now a Controller responsibility */
 		.then(() => dao.addActionWithoutTarget(game, post, voter, 'nolynch'))
-		.then((result) => {
+		.then(() => {
 			const text = getVoteAttemptText(true);
 			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
 			return true;
@@ -606,7 +607,7 @@ exports.nolynchHandler = function (command) {
 			return getVotingErrorText(reason, voter)
 			.then((text) => {
 				text += '\n<hr />\n';
-				text += getVoteAttemptText(false);					
+				text += getVoteAttemptText(false);
 				internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
 			});
 		});
@@ -633,11 +634,11 @@ exports.unvoteHandler = function (command) {
 		let text = '@' + command.post.username + (success ? ' unvoted ' : ' tried to unvote ');
 
 		text = text	+ 'in post #<a href="https://what.thedailywtf.com/t/'
-				+ command.post.topic_id + '/' + command.post.post_number + '">'
-				+ command.post.post_number + '</a>.\n\n'
+				+ game + '/' + post + '">'
+				+ post + '</a>.\n\n'
 				+ 'Vote text:\n[quote]\n' + command.input + '\n[/quote]';
 		return text;
-	};
+	}
 	
 	/*Validation*/
 	return dao.ensureGameExists(game)
@@ -650,7 +651,7 @@ exports.unvoteHandler = function (command) {
 		})
 		.then(() => verifyPlayerCanVote(game, voter))
 		.then(() => revokeCurrentVote(game, voter))/* Revoke current vote, now a Controller responsibility */
-		.then((result) => {
+		.then(() => {
 			const text = getVoteAttemptText(true);
 			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
 			return true;
@@ -660,7 +661,7 @@ exports.unvoteHandler = function (command) {
 			return getVotingErrorText(reason, voter)
 			.then((text) => {
 				text += '\n<hr />\n';
-				text += getVoteAttemptText(false);					
+				text += getVoteAttemptText(false);
 				internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
 			});
 		});
@@ -701,7 +702,7 @@ exports.voteHandler = function (command) {
 				+ command.post.post_number + '</a>.\n\n'
 				+ 'Vote text:\n[quote]\n' + command.input + '\n[/quote]';
 		return text;
-	};
+	}
 	
 	return dao.ensureGameExists(game) /*Validation*/
 		.then( () => dao.getGameStatus(game))
@@ -756,7 +757,7 @@ exports.voteHandler = function (command) {
 			return getVotingErrorText(reason, voter, target)
 			.then((text) => {
 				text += '\n<hr />\n';
-				text += getVoteAttemptText(false);					
+				text += getVoteAttemptText(false);
 				internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
 			});
 		});
