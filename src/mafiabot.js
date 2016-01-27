@@ -963,6 +963,7 @@ exports.listAllPlayersHandler = function (command) {
   * @returns {Promise}        A promise that will resolve when the game is ready
   */
 exports.listVotesHandler = function (command) {
+	const noLynchDisplayName = 'No lynch';
 	const data = {
 		day: 0,
 		votes: {},
@@ -970,6 +971,15 @@ exports.listVotesHandler = function (command) {
 		notVoting: [],
 		toExecute: 0
 	};
+	
+	//Sample format:
+	data.votes[noLynchDisplayName] =  {
+				names: [],
+				num: 0,
+				target: noLynchDisplayName,
+				percent: 0,
+				mod: 0
+			};
 
 	const currentlyVoting = [];
 
@@ -985,7 +995,7 @@ exports.listVotesHandler = function (command) {
 		}).then((rows) => {
 			rows.forEach((row) => {
 				const voter = row.player.properName;
-				const votee = (row.action === dao.action.nolynch ? 'No lynch' : row.target.properName);
+				const votee = (row.action === dao.action.nolynch ? noLynchDisplayName : row.target.properName);
 
 				if (!data.votes.hasOwnProperty(votee)) {
 					data.votes[votee] = {
@@ -1042,7 +1052,7 @@ exports.listVotesHandler = function (command) {
 					pendingLookups.push(currLookup);
 				}
 			});
-			
+						
 			return Promise.all(pendingLookups).then(() => readFile(__dirname + '/templates/voteTemplate.handlebars'));
 		}).then((buffer) => {
 			const source = buffer.toString();

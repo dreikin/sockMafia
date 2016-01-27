@@ -1614,6 +1614,63 @@ describe('mafia', () => {
 				dataSent.votes.accalia.mod.should.equal(-1);
 			});
 		});
+		
+		it('should always output nolynch', () => {
+			const command = {
+				post: {
+					username: 'tehNinja',
+					'topic_id': 12345,
+					'post_number': 98765
+				}
+			};
+			
+			const players = [
+				{player: {'name': 'yamikuronue', properName: 'Yamikuronue'}, 'playerStatus': 'alive'},
+				{player: {'name': 'accalia', properName: 'accalia'}, 'playerStatus': 'alive'}
+			];
+
+			
+			const votes = [
+				{
+					target: {
+						name: 'accalia',
+						properName: 'accalia'
+					},
+					player: {
+						name: 'yamikuronue',
+						properName: 'Yamikuronue'
+					},
+					post: 123,
+					isCurrent: true,
+					rescindedAt: null
+				}
+			];
+			
+			
+			sandbox.stub(mafiaDAO, 'ensureGameExists').resolves();
+			sandbox.stub(mafiaDAO, 'getCurrentDay').resolves(42);
+			sandbox.stub(mafiaDAO, 'getNumToLynch').resolves(69);
+			sandbox.stub(mafiaDAO, 'getAllVotesForDaySorted').resolves(votes);
+			sandbox.stub(mafiaDAO, 'getLivingPlayers').resolves(players);
+			sandbox.stub(mafiaDAO, 'getPlayerProperty').resolves('hated');
+			const fakeTemplate = sandbox.stub().returns('Some string output');
+			sandbox.stub(Handlebars, 'compile').returns(fakeTemplate);
+			
+			mafia.internals.browser = browser;
+			mafia.internals.configuration = {
+				mods: ['dreikin']
+			};
+			
+			return mafia.listVotesHandler(command).then(() => {
+				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
+				
+				fakeTemplate.called.should.be.true;
+				const dataSent = fakeTemplate.getCall(0).args[0];
+				
+				dataSent.votes['No lynch'].mod.should.equal(0);
+				dataSent.votes['No lynch'].num.should.equal(0);
+			});
+		});
 	});
 	
 	describe('kill()', () => {
