@@ -708,7 +708,7 @@ module.exports = {
 			module.exports.getCurrentDay(game),
 			(playerInstance, day) => {
 				return module.exports.getCurrentVotes(game, day)
-					.filter((vote) => vote.voter.id === playerInstance.id);
+					.filter((vote) => vote.player.id === playerInstance.id);
 			});
 	},
 	
