@@ -674,23 +674,12 @@ module.exports = {
 	},
 
 	getAllVotesForDaySorted: function(game, day) {
-		const seen = new Map();
-
 		return module.exports.getAllVotesForDay(game, day)
 			.then((votes) => {
 				return votes.sort((a, b) => b.post - a.post); // latest first
 			})
 			.mapSeries((vote) => {
-				if (seen.has(vote.player.name)) {
-					vote.isCurrent = false;
-					vote.rescindedAt = seen.get(vote.player.name);
-					seen.set(vote.player.name, vote.post);
-				} else {
-					vote.isCurrent = true;
-					vote.rescindedAt = null;
-					seen.set(vote.player.name, vote.post);
-				}
-
+				vote.isCurrent = !(vote.retractedInPost);
 				return vote;
 			})
 			.filter((vote) => vote.action !== module.exports.action.unvote)
