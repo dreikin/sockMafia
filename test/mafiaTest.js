@@ -59,7 +59,7 @@ describe('mafia', () => {
 		expect(mafia.stop).to.not.throw();
 	});
 
-	describe('prepare()', () => {	
+	describe('prepare()', () => {
 		it('Should register commands', () => {
 			const events = {
 				onCommand: commandSpy,
