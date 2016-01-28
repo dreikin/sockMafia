@@ -713,8 +713,6 @@ module.exports = {
 	},
 	
 	revokeAction: function(game, id, revokedInId) {
-		//Not yet implemented
-		Promise.resolve('Implement me');
 		return Models.actions.findOne({
 			where: {
 				post: id

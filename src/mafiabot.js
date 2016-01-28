@@ -650,7 +650,7 @@ exports.unvoteHandler = function (command) {
 			return Promise.reject('Game already ' + status);
 		})
 		.then(() => verifyPlayerCanVote(game, voter))
-		.then(() => revokeCurrentVote(game, voter))/* Revoke current vote, now a Controller responsibility */
+		.then(() => revokeCurrentVote(game, voter, post))/* Revoke current vote, now a Controller responsibility */
 		.then(() => {
 			const text = getVoteAttemptText(true);
 			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
