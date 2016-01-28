@@ -1217,7 +1217,7 @@ describe('mafia', () => {
 					},
 					post: 123,
 					isCurrent: true,
-					rescindedAt: null
+					retractedInPost: null
 				}
 			];
 			
@@ -1284,7 +1284,7 @@ describe('mafia', () => {
 					},
 					post: 121,
 					isCurrent: false,
-					rescindedAt: 123
+					retractedInPost: 123
 				},
 				{
 					target: {
@@ -1297,7 +1297,7 @@ describe('mafia', () => {
 					},
 					post: 123,
 					isCurrent: true,
-					rescindedAt: null
+					retractedInPost: null
 				}
 			];
 			
@@ -1368,7 +1368,7 @@ describe('mafia', () => {
 					},
 					post: 121,
 					isCurrent: false,
-					rescindedAt: 122
+					retractedInPost: 122
 				},
 				{
 					target: {
@@ -1381,7 +1381,7 @@ describe('mafia', () => {
 					},
 					post: 122,
 					isCurrent: false,
-					rescindedAt: 123
+					retractedInPost: 123
 				},
 				{
 					target: {
@@ -1394,7 +1394,7 @@ describe('mafia', () => {
 					},
 					post: 123,
 					isCurrent: true,
-					rescindedAt: null
+					retractedInPost: null
 				},
 				{
 					target: {
@@ -1407,7 +1407,7 @@ describe('mafia', () => {
 					},
 					post: 125,
 					isCurrent: true,
-					rescindedAt: null
+					retractedInPost: null
 				}
 			];
 			
@@ -1478,7 +1478,7 @@ describe('mafia', () => {
 					},
 					post: 123,
 					isCurrent: true,
-					rescindedAt: null
+					retractedInPost: null
 				}
 			];
 			
@@ -1534,7 +1534,7 @@ describe('mafia', () => {
 					},
 					post: 123,
 					isCurrent: true,
-					rescindedAt: null
+					retractedInPost: null
 				}
 			];
 			
@@ -1590,7 +1590,7 @@ describe('mafia', () => {
 					},
 					post: 123,
 					isCurrent: true,
-					rescindedAt: null
+					retractedInPost: null
 				}
 			];
 			
@@ -1646,7 +1646,7 @@ describe('mafia', () => {
 					},
 					post: 123,
 					isCurrent: true,
-					rescindedAt: null
+					retractedInPost: null
 				}
 			];
 			

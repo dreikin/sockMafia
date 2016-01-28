@@ -1015,7 +1015,7 @@ exports.listVotesHandler = function (command) {
 				data.votes[votee].names.push({
 					voter: voter,
 					retracted: !row.isCurrent,
-					retractedAt: row.rescindedAt,
+					retractedAt: row.retractedInPost,
 					post: row.post,
 					game: id
 				});
