@@ -524,7 +524,7 @@ function revokeCurrentVote(game, voter, post) {
 			vote = vote[0];
 		}
 		if (vote) {
-			return dao.revokeAction(game, vote.id, post);
+			return dao.revokeAction(game, vote.post, post);
 		} else {
 			return true;
 		}
@@ -595,7 +595,7 @@ exports.nolynchHandler = function (command) {
 			return Promise.reject('Game already ' + status);
 		})
 		.then(() => verifyPlayerCanVote(game, voter))
-		.then(() => revokeCurrentVote(game, voter))/* Revoke current vote, now a Controller responsibility */
+		.then(() => revokeCurrentVote(game, voter, post))/* Revoke current vote, now a Controller responsibility */
 		.then(() => dao.addActionWithoutTarget(game, post, voter, 'nolynch'))
 		.then(() => {
 			const text = getVoteAttemptText(true);

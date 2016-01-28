@@ -691,6 +691,7 @@ describe('mafia', () => {
 			sandbox.stub(mafiaDAO, 'addVote').resolves(true);
 			sandbox.stub(mafiaDAO, 'getCurrentVoteByPlayer').resolves({
 				id: 1,
+				post: 98556,
 				name: 'charlie'
 			});
 			sandbox.stub(mafiaDAO, 'revokeAction').resolves();
@@ -700,7 +701,7 @@ describe('mafia', () => {
 				mafiaDAO.getCurrentVoteByPlayer.called.should.be.true;
 				mafiaDAO.revokeAction.called.should.be.true;
 				mafiaDAO.revokeAction.getCall(0).args[0].should.equal(12345);
-				mafiaDAO.revokeAction.getCall(0).args[1].should.equal(1);
+				mafiaDAO.revokeAction.getCall(0).args[1].should.equal(98556);
 				mafiaDAO.revokeAction.getCall(0).args[2].should.equal(98765);
 				
 				browser.createPost.calledWith(command.post.topic_id, command.post.post_number).should.be.true;
