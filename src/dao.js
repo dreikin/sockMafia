@@ -715,6 +715,14 @@ module.exports = {
 	revokeAction: function(game, id, revokedInId) {
 		//Not yet implemented
 		Promise.resolve('Implement me');
+		return Models.actions.findOne({
+			where: {
+				post: id
+			}
+		}).then((action) => {
+			action.retractedInPost = revokedInId;
+			return action.save();
+		});
 	},
 
 	getPlayersWithoutActiveVotes: function(game, day) {
