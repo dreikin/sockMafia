@@ -720,6 +720,9 @@ module.exports = {
 				post: id
 			}
 		}).then((action) => {
+			if (!action) {
+				return Promise.reject('No action found for post ' + id);
+			}
 			action.retractedInPost = revokedInId;
 			return action.save();
 		});
