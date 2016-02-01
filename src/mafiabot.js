@@ -159,7 +159,7 @@ function shuffle(array) {
 }
 
 function registerPlayerCommands(events) {
-	events.onCommand('for', 'vote for a player to be executed', exports.voteHandler, () => 0);
+	events.onCommand('for', 'vote for a player to be executed', exports.forHandler, () => 0);
 	events.onCommand('join', 'join current mafia game', exports.joinHandler, () => 0);
 	events.onCommand('list-all-players', 'list all players, dead and alive', exports.listAllPlayersHandler, () => 0);
 	events.onCommand('list-all-votes', 'list all votes from the game\'s start', exports.listAllVotesHandler, () => 0);
@@ -518,9 +518,9 @@ function verifyPlayerCanVote(game, voter) {
 		.then(() => mustBeTrue(isDaytime, [game], 'It is not day'));
 }
 
-function revokeCurrentVote(game, voter, post) {
+function revokeCurrentVote(game, voter, post, type) {
 	const promiseArray = [];
-	return dao.getCurrentVoteByPlayer(game, voter).then((votes) => {
+	return dao.getCurrentActionByPlayer(game, voter, type).then((votes) => {
 		if (!votes) {
 			return true;
 		}
@@ -717,13 +717,43 @@ exports.voteHandler = function (command) {
 	// I need to check the rules for names.  The latter part may work just by using `(\w*)` after the `@?`.
 	const target = command.args[0].replace(/^@?(.*?)[.!?, ]?/, '$1');
 	
+	return dao.getPlayerProperty(game, voter).then((property) => {
+		if (property === dao.playerProperty.doubleVoter) {
+			return doVote(game, post, voter, target, command.input, 2);
+		} else {
+			return doVote(game, post, voter, target, command.input, 1);
+		}
+	});
+};
+
+exports.forHandler = function (command) {
+	const game = command.post.topic_id;
+	const post = command.post.post_number;
+	const voter = command.post.username;
+	// The following regex strips a preceding @ and captures up to either the end of input or one of [.!?, ].
+	// I need to check the rules for names.  The latter part may work just by using `(\w*)` after the `@?`.
+	const target = command.args[0].replace(/^@?(.*?)[.!?, ]?/, '$1');
+	
+	return dao.getPlayerProperty(game, voter).then((property) => {
+		return doVote(game, post, voter, target, command.input, 1);
+	});
+};
+
+function doVote(game, post, voter, target, input, voteNum) {
+	let action;
+	if (voteNum === 2) {
+		action = dao.action.dblVote;
+	} else {
+		action = dao.action.vote;
+	}
+			
 	function getVoteAttemptText(success) {
-		let text = '@' + command.post.username + (success ? ' voted for ' : ' tried to vote for ') + '@' + target;
+		let text = '@' + voter + (success ? ' voted for ' : ' tried to vote for ') + '@' + target;
 
 		text = text	+ ' in post #<a href="https://what.thedailywtf.com/t/'
-				+ command.post.topic_id + '/' + command.post.post_number + '">'
-				+ command.post.post_number + '</a>.\n\n'
-				+ 'Vote text:\n[quote]\n' + command.input + '\n[/quote]';
+				+ game + '/' + post + '">'
+				+ post + '</a>.\n\n'
+				+ 'Vote text:\n[quote]\n' + input + '\n[/quote]';
 		return text;
 	}
 	
@@ -742,15 +772,15 @@ exports.voteHandler = function (command) {
 				mustBeTrue(dao.isPlayerAlive, [game, target], 'Target not alive')
 			]);
 		})     /* Revoke current vote, now a Controller responsibility */
-		.then(() => revokeCurrentVote(game, voter, post))  /* Add new vote */
-		.then(() => dao.addVote(game, post, voter, target))
+		.then(() => revokeCurrentVote(game, voter, post, action))  /* Add new vote */
+		.then(() => dao.addActionWithTarget(game, post, voter, action, target))
 		.then((result) => {
 			if (!result) {
 				return Promise.reject('Vote failed');
 			}
 			
 			const text = getVoteAttemptText(true);
-			internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+			internals.browser.createPost(game, post, text, () => 0);
 			return true;
 		})
 		.then(() => dao.getCurrentDay(game))   /*Check for auto-lynch*/
@@ -781,7 +811,7 @@ exports.voteHandler = function (command) {
 			.then((text) => {
 				text += '\n<hr />\n';
 				text += getVoteAttemptText(false);
-				internals.browser.createPost(command.post.topic_id, command.post.post_number, text, () => 0);
+				internals.browser.createPost(game, post, text, () => 0);
 			});
 		});
 };

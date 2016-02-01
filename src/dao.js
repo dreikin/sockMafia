@@ -110,6 +110,7 @@ module.exports = {
 	action: {
 		for: 'for',
 		vote: 'vote',
+		dblVote: 'dblVote',
 		unvote: 'unvote',
 		nolynch: 'nolynch',
 		kill: 'kill',
@@ -699,6 +700,10 @@ module.exports = {
 				return module.exports.getCurrentVotes(game, day)
 					.filter((vote) => vote.player.id === playerInstance.id);
 			});
+	},
+	
+	getCurrentActionByPlayer: function(game, player) {
+		/*TODO*/
 	},
 	
 	revokeAction: function(game, id, revokedInId) {
