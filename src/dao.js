@@ -108,9 +108,8 @@ module.exports = {
 	// Enums
 
 	action: {
-		for: 'for',
 		vote: 'vote',
-		unvote: 'unvote',
+		dblVote: 'dblvote',
 		nolynch: 'nolynch',
 		kill: 'kill',
 		visit: 'visit',
@@ -586,7 +585,9 @@ module.exports = {
 	/*
 	 * Basic functions:
 	 * - addAction  Add an action by a player.
-	 * - retractAction  Retract an action by a player.
+	 * - getCurrentActionByPlayer  Get a player's current action of a specified type.
+	 * - getCurrentActions  Get all current actions.
+	 * - revokeAction  Revoke an action by a player.
 	 */
 	/*
 	 * Derivative functions:
@@ -605,8 +606,49 @@ module.exports = {
 		});
 	},
 
-	retractAction: function() {
-		return Promise.reject('Not yet implemented.');
+	getCurrentActionByPlayer(game, player, action) {
+		return Promise.join(
+			module.exports.getGameById(game),
+			module.exports.getPlayerByName(player),
+			(gameInstance, playerInstance) => {
+				return Models.actions.findAll({
+					where: {
+						gameId: game,
+						day: gameInstance.day,
+						action: action,
+						playerId: playerInstance.id,
+						retractedInPost: null
+					}
+				});
+			}
+		);
+	},
+
+	getCurrentActions(game) {
+		return module.exports.getGameById(game)
+			.then((gameInstance) => {
+				return Models.actions.findAll({
+					where: {
+						gameId: game,
+						day: gameInstance.day,
+						retractedInPost: null
+					}
+				});
+			});
+	},
+
+	revokeAction: function(game, id, revokedInId) {
+		return Models.actions.findOne({
+			where: {
+				post: id
+			}
+		}).then((action) => {
+			if (!action) {
+				return Promise.reject('No action found for post ' + id);
+			}
+			action.retractedInPost = revokedInId;
+			return action.save();
+		});
 	},
 
 	addActionWithoutTarget: function(game, post, player, action) {
@@ -633,7 +675,6 @@ module.exports = {
 	// Vote functions
 	/*
 	 * Basic functions:
-	 * - addVote  Add a vote.
 	 * - getAllVotesForDay  Get all votes for a game-day.
 	 */
 	/*
@@ -650,10 +691,6 @@ module.exports = {
 	 * - hasPlayerVotedToday  Check whether a player has voted in the current game-day.
 	 */
 
-	addVote: function(game, post, voter, target) {
-		return module.exports.addActionWithTarget(game, post, voter, module.exports.action.vote, target);
-	},
-
 	getAllVotesForDay: function(game, day) {
 		return Models.actions.findAll({
 			where: {
@@ -661,8 +698,7 @@ module.exports = {
 				day: day,
 				action: [
 					module.exports.action.vote,
-					module.exports.action.for,
-					module.exports.action.unvote,
+					module.exports.action.dblVote,
 					module.exports.action.nolynch
 				]
 			},
@@ -676,14 +712,15 @@ module.exports = {
 	getAllVotesForDaySorted: function(game, day) {
 		return module.exports.getAllVotesForDay(game, day)
 			.then((votes) => {
-				return votes.sort((a, b) => b.post - a.post); // latest first
+				return votes.sort((a, b) => a.post - b.post); // latest last
 			})
-			.mapSeries((vote) => {
+			.map((vote) => {
 				vote.isCurrent = !(vote.retractedInPost);
+				if (vote.action === module.exports.action.dblVote) {
+					vote.action = module.exports.action.vote;
+				}
 				return vote;
-			})
-			.filter((vote) => vote.action !== module.exports.action.unvote)
-			.then((votes) => votes.reverse());
+			});
 	},
 
 	getCurrentVotes: function(game, day) {
@@ -699,20 +736,6 @@ module.exports = {
 				return module.exports.getCurrentVotes(game, day)
 					.filter((vote) => vote.player.id === playerInstance.id);
 			});
-	},
-	
-	revokeAction: function(game, id, revokedInId) {
-		return Models.actions.findOne({
-			where: {
-				post: id
-			}
-		}).then((action) => {
-			if (!action) {
-				return Promise.reject('No action found for post ' + id);
-			}
-			action.retractedInPost = revokedInId;
-			return action.save();
-		});
 	},
 
 	getPlayersWithoutActiveVotes: function(game, day) {
@@ -745,8 +768,7 @@ module.exports = {
 						day: gameInstance.day,
 						action: [
 							module.exports.action.vote,
-							module.exports.action.for,
-							module.exports.action.unvote,
+							module.exports.action.dblVote,
 							module.exports.action.nolynch
 						]
 					}
